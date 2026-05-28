@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CFO - Controla Finanzas Online</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  body { background: #000; font-family: 'Outfit', system-ui, sans-serif; color: #eee; }
+  input, select { color-scheme: dark; }
+  input:focus, select:focus { border-color: #2a2a2a !important; outline: none; }
+  @keyframes slideUp { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes fadeIn  { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes spin    { to{transform:rotate(360deg)} }
+  ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-track{background:#000} ::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:2px}
+  input[type=number]::-webkit-inner-spin-button{opacity:.3}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;font-family:monospace"><div style="text-align:center"><div style="width:32px;height:32px;border:2px solid #111;border-top-color:#22c55e;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem"></div><div style="color:#222;font-size:0.72rem">Cargando CFO...</div></div></div></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ─── Storage via localStorage ────────────────────────────────────────────────
+async function load(key) {
+  try { const v = localStorage.getItem("cfo_" + key); return v ? JSON.parse(v) : []; } catch { return []; }
+}
+async function loadOne(key) {
+  try { const v = localStorage.getItem("cfo_one_" + key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+async function save(key, data) {
+  try { localStorage.setItem("cfo_" + key, JSON.stringify(data)); } catch {}
+}
+async function saveOne(key, data) {
+  try { localStorage.setItem("cfo_one_" + key, JSON.stringify(data)); } catch {}
+}
+
+// ─── Seed data ────────────────────────────────────────────────────────────────
+const SEED_EXPENSES = [
+  {date:"2026-04-23",description:"Pinasmposnet",         category:"Comida",     amount:4785,     card:"Visa Santander"},
+  {date:"2026-04-24",description:"Trámite Bs As GOB",    category:"Servicios",  amount:34200,     card:"Visa Santander"},
+  {date:"2026-04-24",description:"Salame y Queso",       category:"Comida",     amount:32500,     card:"Visa Santander"},
+  {date:"2026-04-26",description:"Hailing (transporte)", category:"Transporte", amount:41400,     card:"Visa Santander"},
+  {date:"2026-04-27",description:"Pinasmposnet",         category:"Comida",     amount:6750,     card:"Visa Santander"},
+  {date:"2026-04-27",description:"Combustible YPF",      category:"Transporte", amount:86071.92,     card:"Visa Santander"},
+  {date:"2026-04-27",description:"Carrefour Vte López",  category:"Comida",     amount:5140.85,     card:"Visa Santander"},
+  {date:"2026-04-28",description:"Pinasmposnet",         category:"Comida",     amount:6875,     card:"Visa Santander"},
+  {date:"2026-04-28",description:"El Parmegiano",        category:"Comida",     amount:19280,     card:"Visa Santander"},
+  {date:"2026-04-28",description:"Carrefour Vte López",  category:"Comida",     amount:3922.81,     card:"Visa Santander"},
+  {date:"2026-04-30",description:"Pinasmposnet",         category:"Comida",     amount:7000,     card:"Visa Santander"},
+  {date:"2026-04-30",description:"Carrefour Vte López",  category:"Comida",     amount:2099.86,     card:"Visa Santander"},
+  {date:"2026-05-02",description:"PedidosYa Market",     category:"Comida",     amount:15520,     card:"Visa Santander"},
+  {date:"2026-05-03",description:"McDonald's Ruta 8",    category:"Comida",     amount:62996,     card:"Visa Santander"},
+  {date:"2026-05-03",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
+  {date:"2026-05-04",description:"Pinasmposnet",         category:"Comida",     amount:12500,     card:"Visa Santander"},
+  {date:"2026-05-04",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
+  {date:"2026-05-04",description:"Combustible YPF",      category:"Transporte", amount:39999.92,     card:"Visa Santander"},
+  {date:"2026-05-04",description:"Havanna San Fernando", category:"Comida",     amount:10500,     card:"Visa Santander"},
+  {date:"2026-05-04",description:"PedidosYa Market",     category:"Comida",     amount:20520,     card:"Visa Santander"},
+  {date:"2026-05-05",description:"Carrefour Vte López",  category:"Comida",     amount:2699.82,     card:"Visa Santander"},
+  {date:"2026-05-09",description:"PedidosYa Propina",    category:"Comida",     amount:700,     card:"Visa Santander"},
+  {date:"2026-05-09",description:"PedidosYa Market",     category:"Comida",     amount:20520,     card:"Visa Santander"},
+  {date:"2026-05-09",description:"Old Man Family",       category:"Comida",     amount:9000,     card:"Visa Santander"},
+  {date:"2026-05-11",description:"Carrefour Vte López",  category:"Comida",     amount:11037,     card:"Visa Santander"},
+  {date:"2026-05-12",description:"Pinasmposnet",         category:"Comida",     amount:8120,     card:"Visa Santander"},
+  {date:"2026-05-14",description:"Pinasmposnet",         category:"Comida",     amount:9500,     card:"Visa Santander"},
+  {date:"2026-05-14",description:"Carrefour Vte López",  category:"Comida",     amount:587.79,     card:"Visa Santander"},
+  {date:"2026-05-16",description:"Old Man Family",       category:"Comida",     amount:4000,     card:"Visa Santander"},
+  {date:"2026-05-18",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
+  {date:"2026-05-18",description:"PedidosYa Market",     category:"Comida",     amount:11770,     card:"Visa Santander"},
+  {date:"2026-05-19",description:"Pinasmposnet",         category:"Comida",     amount:7020,     card:"Visa Santander"},
+].map((e,i)=>({...e,id:9000000+i}));
+
+const SEED_INSTALLMENTS = [
+  {description:"Adidas (PAYU)",        amount:29833,     cur:6, tot:6,  rem:1, cat:"Ropa"},
+  {description:"Adidas (MercadoPago)", amount:18999.78,  cur:5, tot:6,  rem:2, cat:"Ropa"},
+  {description:"Sporting",             amount:8333.33,   cur:3, tot:3,  rem:1, cat:"Entretenimiento"},
+  {description:"Adidas (PAYU) #2",     amount:17583,     cur:3, tot:6,  rem:4, cat:"Ropa"},
+  {description:"Cetrogar SA",          amount:34966.33,  cur:3, tot:3,  rem:1, cat:"Hogar"},
+  {description:"Fravega",              amount:16499.33,  cur:3, tot:3,  rem:1, cat:"Hogar"},
+  {description:"Dexter Panamericana",  amount:39099,     cur:2, tot:2,  rem:1, cat:"Ropa"},
+  {description:"Dexter (MercadoPago)", amount:9999.66,   cur:2, tot:3,  rem:2, cat:"Ropa"},
+  {description:"Solo Deportes",        amount:26666.33,  cur:2, tot:6,  rem:5, cat:"Ropa"},
+  {description:"Adidas Argentina",     amount:36666.34,  cur:1, tot:3,  rem:3, cat:"Ropa"},
+  {description:"Electrónica FL",       amount:102083.25, cur:1, tot:12, rem:12,cat:"Hogar"},
+];
+function buildSeedBills() {
+  const bills=[], base={m:4,y:2026};
+  SEED_INSTALLMENTS.forEach(item=>{
+    for(let i=0;i<item.rem;i++){
+      let m=base.m+i, y=base.y+Math.floor(m/12); m=m%12;
+      bills.push({id:Math.floor(Math.random()*1e9)+i,description:`${item.description} (${item.cur+i}/${item.tot})`,category:item.cat,amount:item.amount,dueDay:1,month:m,year:y,isInstallment:true,card:"Visa Santander"});
+    }
+  });
+  return bills;
+}
+
+const SEED_INV = [
+  {id:1, ticker:"ALUA",      name:"Aluar S.A.",             type:"Acción", qty:43,    price:0.658379,  rendUSD:0,  currency:"USD"},
+  {id:2, ticker:"BYMA",      name:"Bolsas y Mercados Arg.", type:"Acción", qty:68,    price:0.200109,  rendUSD:1,  currency:"USD"},
+  {id:3, ticker:"PAMP",      name:"Pampa Energía",          type:"Acción", qty:7,     price:3.355034,  rendUSD:0,  currency:"USD"},
+  {id:4, ticker:"AAPL",      name:"Apple Inc.",             type:"CEDEAR", qty:2,     price:16.078907, rendUSD:7,  currency:"USD"},
+  {id:5, ticker:"ACWI",      name:"iShares MSCI ACWI ETF",  type:"CEDEAR", qty:9,     price:6.261093,  rendUSD:3,  currency:"USD"},
+  {id:6, ticker:"IBB",       name:"iShares Nasdaq Biotech", type:"CEDEAR", qty:7,     price:6.517149,  rendUSD:1,  currency:"USD"},
+  {id:7, ticker:"LRCX",      name:"Lam Research Corp.",     type:"CEDEAR", qty:12,    price:5.668306,  rendUSD:23, currency:"USD"},
+  {id:8, ticker:"NOW",       name:"ServiceNow Inc.",        type:"CEDEAR", qty:32,    price:0.620497,  rendUSD:0,  currency:"USD"},
+  {id:9, ticker:"NVDA",      name:"Nvidia Corporation",     type:"CEDEAR", qty:20,    price:9.379363,  rendUSD:32, currency:"USD"},
+  {id:10,ticker:"SPY",       name:"SPDR S&P 500",           type:"CEDEAR", qty:8,     price:38.881913, rendUSD:28, currency:"USD"},
+  {id:11,ticker:"PN41O",     name:"ON Pan American Energy", type:"ON",     qty:98,    price:1.080345,  rendUSD:12, currency:"USD"},
+  {id:12,ticker:"BCRDOLARA", name:"Soberano Clase A",       type:"Fondo",  qty:73.44, price:1.454425,  rendUSD:1,  currency:"USD"},
+  {id:13,ticker:"BRTA",      name:"Renta Mixta Clase A",    type:"Fondo",  qty:133.07,price:0.489818,  rendUSD:6,  currency:"USD"},
+];
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const CATS=["Comida","Transporte","Salud","Servicios","Entretenimiento","Ropa","Educación","Hogar","Suscripciones","Otro"];
+const INV_TYPES=["CEDEAR","Acción","ON","Fondo"];
+const MONTHS_S=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const MONTHS=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const now=new Date();
+const fmtARS=n=>new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:0}).format(n);
+const fmtUSD=n=>`u$s ${n.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+const fmtUSD2=n=>`u$s ${n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const fmtShort=n=>n>=1000000?`$${(n/1e6).toFixed(1)}M`:n>=1000?`$${(n/1000).toFixed(0)}K`:fmtARS(n);
+const CAT_COLORS={Comida:"#ef4444",Transporte:"#3b82f6",Salud:"#ec4899",Servicios:"#a855f7",Entretenimiento:"#f59e0b",Ropa:"#22c55e",Educación:"#06b6d4",Hogar:"#84cc16",Suscripciones:"#6366f1",Otro:"#6b7280"};
+const TYPE_COLOR={"CEDEAR":"#22c55e","Acción":"#3b82f6","ON":"#f59e0b","Fondo":"#a855f7"};
+
+// ─── Price fetch ──────────────────────────────────────────────────────────────
+async function fetchPrices(tickers) {
+  const prompt=`Search current market prices in USD for: ${tickers.join(", ")}. CEDEARs: use underlying US price. Argentine stocks: convert ARS to USD at blue rate. Return ONLY raw JSON: {"AAPL":185.50} Use null if not found.`;
+  const messages=[{role:"user",content:prompt}];
+  let r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages})});
+  let d=await r.json();
+  if(d.stop_reason==="tool_use"){
+    const aMsg={role:"assistant",content:d.content};
+    const tRes=d.content.filter(b=>b.type==="tool_use").map(b=>({type:"tool_result",tool_use_id:b.id,content:""}));
+    r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[...messages,aMsg,{role:"user",content:tRes}]})});
+    d=await r.json();
+  }
+  if(d.error) throw new Error(d.error.message);
+  const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const s=text.indexOf("{"),e=text.lastIndexOf("}");
+  if(s===-1) throw new Error("No JSON");
+  return JSON.parse(text.slice(s,e+1));
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const SVGS={
+  plus:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  trash:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg>,
+  upload:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  check:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20,6 9,17 4,12"/></svg>,
+  x:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  arrow:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9,18 15,12 9,6"/></svg>,
+  home:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,
+  wallet:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M16 10a1 1 0 000 2h2a1 1 0 000-2h-2z"/><path d="M2 10h20"/></svg>,
+  calendar:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  trend:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg>,
+  refresh:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>,
+  spark:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/></svg>,
+};
+const Ic=({n,s=16})=><span style={{display:"inline-flex",width:s,height:s,flexShrink:0}}>{SVGS[n]}</span>;
+
+// ─── Base UI ──────────────────────────────────────────────────────────────────
+const inpS={width:"100%",background:"#111",border:"1px solid #222",borderRadius:10,padding:"0.6rem 0.85rem",color:"#eee",fontSize:"0.88rem",fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+const Field=({label,children})=><div style={{marginBottom:"0.85rem"}}><label style={{display:"block",fontSize:"0.65rem",fontWeight:700,color:"#444",marginBottom:"0.3rem",textTransform:"uppercase",letterSpacing:"0.1em"}}>{label}</label>{children}</div>;
+function Btn({children,onClick,color="#22c55e",ghost=false,full=false,sm=false,disabled=false,style={}}){
+  return <button disabled={disabled} onClick={onClick} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:sm?"0.35rem 0.7rem":"0.6rem 1rem",borderRadius:9,border:ghost?"1px solid #222":"none",cursor:disabled?"not-allowed":"pointer",fontSize:sm?"0.75rem":"0.82rem",fontWeight:700,fontFamily:"inherit",width:full?"100%":"auto",background:ghost?"transparent":color,color:ghost?"#555":"#000",opacity:disabled?0.4:1,...style}}>{children}</button>;
+}
+function Modal({title,onClose,children}){
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,padding:"1.5rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp .22s cubic-bezier(.16,1,.3,1)"}}>
+      <div style={{width:36,height:4,borderRadius:2,background:"#222",margin:"0 auto 1.25rem"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+        <h3 style={{margin:0,fontSize:"1rem",fontWeight:700,color:"#eee"}}>{title}</h3>
+        <button onClick={onClose} style={{background:"#1a1a1a",border:"none",color:"#555",cursor:"pointer",padding:6,borderRadius:8,display:"flex"}}><Ic n="x" s={15}/></button>
+      </div>
+      {children}
+    </div>
+  </div>;
+}
+
+// ─── Pie Chart ────────────────────────────────────────────────────────────────
+function PieChart({data,size=150}){
+  const total=data.reduce((a,b)=>a+b.value,0);
+  if(!total) return null;
+  let angle=-Math.PI/2;
+  const cx=size/2,cy=size/2,r=size/2-10,ri=r*0.52;
+  const slices=data.map(d=>{
+    const sweep=(d.value/total)*2*Math.PI;
+    const x1=cx+r*Math.cos(angle),y1=cy+r*Math.sin(angle);
+    angle+=sweep;
+    const x2=cx+r*Math.cos(angle),y2=cy+r*Math.sin(angle);
+    const xi1=cx+ri*Math.cos(angle-sweep),yi1=cy+ri*Math.sin(angle-sweep);
+    const xi2=cx+ri*Math.cos(angle),yi2=cy+ri*Math.sin(angle);
+    const large=sweep>Math.PI?1:0;
+    return {...d,path:`M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${ri},${ri} 0 ${large},0 ${xi1},${yi1} Z`,pct:Math.round((d.value/total)*100)};
+  });
+  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{slices.map((s,i)=><path key={i} d={s.path} fill={s.color} stroke="#000" strokeWidth="1.5"/>)}</svg>;
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+function Home({expenses,bills,investments,onNav,filterMonth,filterYear,setFilterMonth,setFilterYear}){
+  const filtExp=expenses.filter(e=>{const d=new Date(e.date);return d.getMonth()===filterMonth&&d.getFullYear()===filterYear;});
+  const totalExp=filtExp.reduce((a,b)=>a+b.amount,0);
+  const monthBills=bills.filter(b=>(b.month??now.getMonth())===filterMonth&&(b.year??now.getFullYear())===filterYear);
+  const totalBills=monthBills.reduce((a,b)=>a+b.amount,0);
+  const invUSD=investments.reduce((a,b)=>a+(b.qty*b.price),0);
+  const invRend=investments.reduce((a,b)=>a+(b.rendUSD||0),0);
+  const catData=CATS.map(c=>({name:c,value:filtExp.filter(e=>e.category===c).reduce((a,b)=>a+b.amount,0),color:CAT_COLORS[c]})).filter(c=>c.value>0).sort((a,b)=>b.value-a.value);
+  const total=catData.reduce((a,b)=>a+b.value,0);
+  const recentExp=filtExp.slice().reverse().slice(0,4);
+  const upcoming=[0,1,2].map(i=>{let m=(filterMonth+i)%12,y=filterYear+Math.floor((filterMonth+i)/12);const items=bills.filter(b=>(b.month??now.getMonth())===m&&(b.year??now.getFullYear())===y);return{m,y,total:items.reduce((a,b)=>a+b.amount,0),count:items.length};}).filter(x=>x.total>0);
+
+  return <div style={{padding:"0 1rem 90px",animation:"fadeIn .3s ease"}}>
+    <div style={{padding:"1.5rem 0 1rem",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+      <div>
+        <div style={{fontSize:"0.6rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.14em"}}>CFO</div>
+        <div style={{fontSize:"1.5rem",fontWeight:800,color:"#fff",lineHeight:1.1}}>Controla Finanzas</div>
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <select style={{...inpS,width:68,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterMonth} onChange={e=>setFilterMonth(+e.target.value)}>{MONTHS_S.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+        <select style={{...inpS,width:66,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterYear} onChange={e=>setFilterYear(+e.target.value)}>{[now.getFullYear(),now.getFullYear()-1].map(y=><option key={y}>{y}</option>)}</select>
+      </div>
+    </div>
+
+    {catData.length>0 ? (
+      <div style={{background:"#0a0a0a",border:"1px solid #1c1c1c",borderRadius:16,padding:"1rem",marginBottom:"0.75rem"}}>
+        <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:"0.85rem"}}>Gastos por categoría · {MONTHS_S[filterMonth]} {filterYear}</div>
+        <div style={{display:"flex",gap:"1rem",alignItems:"center"}}>
+          <div style={{flexShrink:0}}><PieChart data={catData} size={150}/></div>
+          <div style={{flex:1,minWidth:0}}>
+            {catData.map(c=><div key={c.name} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"0.45rem"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:2,background:c.color,flexShrink:0}}/><span style={{fontSize:"0.72rem",color:"#888"}}>{c.name}</span></div>
+              <span style={{fontSize:"0.68rem",color:c.color,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>{Math.round((c.value/total)*100)}%</span>
+            </div>)}
+            <div style={{borderTop:"1px solid #1a1a1a",marginTop:"0.5rem",paddingTop:"0.5rem",display:"flex",justifyContent:"space-between"}}>
+              <span style={{fontSize:"0.72rem",color:"#444",fontWeight:700}}>Total</span>
+              <span style={{fontSize:"0.75rem",color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",fontWeight:800}}>{fmtARS(total)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : <div style={{background:"#0a0a0a",border:"1px solid #1c1c1c",borderRadius:16,padding:"2rem",marginBottom:"0.75rem",textAlign:"center",cursor:"pointer"}} onClick={()=>onNav("expenses")}><div style={{fontSize:"0.82rem",color:"#222"}}>Sin gastos en {MONTHS_S[filterMonth]} · Agregá uno</div></div>}
+
+    <div onClick={()=>onNav("expenses")} style={{background:"#0a0a0a",border:"1px solid #1c1c1c",borderLeft:"3px solid #ef4444",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"0.6rem",cursor:"pointer",position:"relative"}}>
+      <div style={{fontSize:"0.6rem",color:"#ef4444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:2}}>Gastos · {MONTHS_S[filterMonth]}</div>
+      <div style={{fontSize:"1.7rem",fontWeight:800,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",letterSpacing:"-0.04em",lineHeight:1}}>{fmtARS(totalExp)}</div>
+      <div style={{fontSize:"0.65rem",color:"#333",marginTop:2}}>{filtExp.length} transacciones</div>
+      <div style={{position:"absolute",right:14,bottom:12,color:"#222"}}><Ic n="arrow" s={16}/></div>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.6rem",marginBottom:"1rem"}}>
+      <div onClick={()=>onNav("bills")} style={{background:"#0a0a0a",border:"1px solid #1c1c1c",borderLeft:"3px solid #f59e0b",borderRadius:14,padding:"1rem",cursor:"pointer",position:"relative"}}>
+        <div style={{fontSize:"0.6rem",color:"#f59e0b",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>Cuotas · {MONTHS_S[filterMonth]}</div>
+        <div style={{fontSize:"1.2rem",fontWeight:800,color:"#f59e0b",fontFamily:"'JetBrains Mono',monospace",letterSpacing:"-0.03em",lineHeight:1}}>{fmtARS(totalBills)}</div>
+        <div style={{fontSize:"0.62rem",color:"#333",marginTop:3}}>{monthBills.length} cuotas</div>
+        <div style={{position:"absolute",right:10,bottom:10,color:"#222"}}><Ic n="arrow" s={14}/></div>
+      </div>
+      <div onClick={()=>onNav("investments")} style={{background:"#0a0a0a",border:"1px solid #1c1c1c",borderLeft:"3px solid #22c55e",borderRadius:14,padding:"1rem",cursor:"pointer",position:"relative"}}>
+        <div style={{fontSize:"0.6rem",color:"#22c55e",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>Inversiones</div>
+        <div style={{fontSize:"1.2rem",fontWeight:800,color:"#22c55e",fontFamily:"'JetBrains Mono',monospace",letterSpacing:"-0.03em",lineHeight:1}}>{fmtUSD(invUSD)}</div>
+        {invRend>0&&<div style={{fontSize:"0.62rem",color:"#22c55e88",marginTop:3}}>+{fmtUSD(invRend)} rend.</div>}
+        <div style={{position:"absolute",right:10,bottom:10,color:"#222"}}><Ic n="arrow" s={14}/></div>
+      </div>
+    </div>
+
+    {upcoming.length>0&&<div style={{marginBottom:"1.25rem"}}>
+      <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.55rem"}}>Proyección cuotas</div>
+      <div style={{display:"flex",gap:"0.5rem"}}>
+        {upcoming.map(({m,y,total,count})=><div key={`${y}-${m}`} style={{flex:1,background:"#0a0a0a",border:"1px solid #f59e0b22",borderRadius:10,padding:"0.65rem 0.75rem",textAlign:"center"}}>
+          <div style={{fontSize:"0.6rem",color:"#f59e0b",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{MONTHS_S[m]}</div>
+          <div style={{fontSize:"0.85rem",fontWeight:800,color:"#f59e0b",fontFamily:"'JetBrains Mono',monospace"}}>{fmtShort(total)}</div>
+          <div style={{fontSize:"0.58rem",color:"#333",marginTop:2}}>{count} cuotas</div>
+        </div>)}
+      </div>
+    </div>}
+
+    {recentExp.length>0&&<div>
+      <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.55rem"}}>Últimos gastos</div>
+      {recentExp.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:"0.7rem",padding:"0.6rem 0.85rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,marginBottom:"0.35rem"}}>
+        <div style={{width:7,height:7,borderRadius:"50%",background:CAT_COLORS[e.category],flexShrink:0}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:"0.8rem",fontWeight:500,color:"#ccc",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.description}</div>
+          <div style={{fontSize:"0.62rem",color:"#333",marginTop:1}}>{e.category}</div>
+        </div>
+        <div style={{fontSize:"0.8rem",fontWeight:700,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace"}}>{fmtARS(e.amount)}</div>
+      </div>)}
+    </div>}
+  </div>;
+}
+
+// ─── EXPENSES ─────────────────────────────────────────────────────────────────
+function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMonth,setFilterYear}){
+  const [modal,setModal]=useState(null);
+  const [eF,setEF]=useState({date:now.toISOString().slice(0,10),description:"",category:"Comida",amount:""});
+  const filtExp=expenses.filter(e=>{const d=new Date(e.date);return d.getMonth()===filterMonth&&d.getFullYear()===filterYear;});
+  const totalExp=filtExp.reduce((a,b)=>a+b.amount,0);
+  const catData=CATS.map(c=>({name:c,val:filtExp.filter(e=>e.category===c).reduce((a,b)=>a+b.amount,0)})).filter(c=>c.val>0).sort((a,b)=>b.val-a.val);
+  const maxCat=catData[0]?.val||1;
+  const addExp=async()=>{if(!eF.description||!eF.amount)return;const u=[...expenses,{...eF,id:Date.now(),amount:+eF.amount}];setExpenses(u);await save("expenses",u);setModal(null);setEF({date:now.toISOString().slice(0,10),description:"",category:"Comida",amount:""});};
+  const delExp=async id=>{const u=expenses.filter(x=>x.id!==id);setExpenses(u);await save("expenses",u);};
+
+  return <div style={{padding:"0 1rem 90px",animation:"fadeIn .25s ease"}}>
+    <div style={{padding:"1.25rem 0 0.75rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div><div style={{fontSize:"0.6rem",color:"#ef4444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em"}}>Módulo</div><div style={{fontSize:"1.3rem",fontWeight:800,color:"#fff"}}>Gastos</div></div>
+      <div style={{display:"flex",gap:6}}>
+        <select style={{...inpS,width:65,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterMonth} onChange={e=>setFilterMonth(+e.target.value)}>{MONTHS_S.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+        <select style={{...inpS,width:64,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterYear} onChange={e=>setFilterYear(+e.target.value)}>{[now.getFullYear(),now.getFullYear()-1].map(y=><option key={y}>{y}</option>)}</select>
+      </div>
+    </div>
+    <div style={{background:"#0d0d0d",border:"1px solid #ef444422",borderLeft:"3px solid #ef4444",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1rem"}}>
+      <div style={{fontSize:"0.62rem",color:"#ef4444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Total {MONTHS[filterMonth]}</div>
+      <div style={{fontSize:"2rem",fontWeight:800,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",letterSpacing:"-0.04em"}}>{fmtARS(totalExp)}</div>
+      <div style={{fontSize:"0.68rem",color:"#333",marginTop:2}}>{filtExp.length} transacciones</div>
+    </div>
+    {catData.length>0&&<div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:14,padding:"1rem",marginBottom:"1rem"}}>
+      <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.75rem"}}>Por categoría</div>
+      {catData.map(c=><div key={c.name} style={{marginBottom:"0.5rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.75rem",marginBottom:3}}>
+          <span style={{color:"#888",display:"flex",alignItems:"center",gap:5}}><span style={{width:6,height:6,borderRadius:"50%",background:CAT_COLORS[c.name],display:"inline-block"}}/>{c.name}</span>
+          <span style={{color:CAT_COLORS[c.name],fontFamily:"'JetBrains Mono',monospace",fontSize:"0.72rem"}}>{fmtARS(c.val)}</span>
+        </div>
+        <div style={{height:3,background:"#1a1a1a",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${(c.val/maxCat)*100}%`,background:CAT_COLORS[c.name],borderRadius:2,transition:"width .5s"}}/></div>
+      </div>)}
+    </div>}
+    <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem"}}>
+      <Btn onClick={()=>setModal("add")} color="#ef4444" style={{flex:1,color:"#fff"}}><Ic n="plus" s={14}/>Agregar gasto</Btn>
+    </div>
+    {filtExp.length===0?<div style={{textAlign:"center",color:"#222",padding:"3rem",fontSize:"0.85rem"}}>Sin gastos en {MONTHS[filterMonth]}</div>
+    :filtExp.slice().reverse().map((e,i)=><div key={e.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.7rem 0.85rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,marginBottom:"0.4rem",animation:`fadeIn .25s ${i*.03}s both`}}>
+      <div style={{width:32,height:32,borderRadius:9,background:`${CAT_COLORS[e.category]}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:7,height:7,borderRadius:"50%",background:CAT_COLORS[e.category]}}/></div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:"0.82rem",fontWeight:600,color:"#ddd",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.description}</div>
+        <div style={{fontSize:"0.65rem",color:"#333",marginTop:1,display:"flex",gap:5,alignItems:"center"}}>
+            <span>{e.date}</span><span>·</span><span>{e.category}</span>
+            {e.card&&<span style={{background:"#ef444418",color:"#ef4444",fontSize:"0.58rem",fontWeight:700,padding:"1px 5px",borderRadius:4}}>{e.card}</span>}
+          </div>
+      </div>
+      <div style={{fontSize:"0.85rem",fontWeight:700,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap"}}>{fmtARS(e.amount)}</div>
+      <button onClick={()=>delExp(e.id)} style={{background:"none",border:"none",color:"#252525",cursor:"pointer",padding:4,display:"flex",borderRadius:6}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#252525"}><Ic n="trash" s={13}/></button>
+    </div>)}
+    {modal==="add"&&<Modal title="Nuevo gasto" onClose={()=>setModal(null)}>
+      <Field label="Fecha"><input type="date" style={inpS} value={eF.date} onChange={e=>setEF(f=>({...f,date:e.target.value}))}/></Field>
+      <Field label="Descripción"><input style={inpS} placeholder="Ej: Supermercado" value={eF.description} onChange={e=>setEF(f=>({...f,description:e.target.value}))}/></Field>
+      <Field label="Categoría"><select style={inpS} value={eF.category} onChange={e=>setEF(f=>({...f,category:e.target.value}))}>{CATS.map(c=><option key={c}>{c}</option>)}</select></Field>
+      <Field label="Monto (ARS)"><input type="number" style={inpS} placeholder="0" value={eF.amount} onChange={e=>setEF(f=>({...f,amount:e.target.value}))}/></Field>
+      <div style={{display:"flex",gap:"0.5rem",justifyContent:"flex-end",marginTop:"0.25rem"}}>
+        <Btn ghost onClick={()=>setModal(null)}>Cancelar</Btn>
+        <Btn onClick={addExp} color="#ef4444" style={{color:"#fff"}}><Ic n="plus" s={13}/>Guardar</Btn>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+// ─── BILLS ────────────────────────────────────────────────────────────────────
+function BillsScreen({bills,setBills}){
+  const [modal,setModal]=useState(null);
+  const [bF,setBF]=useState({description:"",category:"Servicios",amount:"",dueDay:""});
+  const addBill=async()=>{if(!bF.description||!bF.amount)return;const u=[...bills,{...bF,id:Date.now(),amount:+bF.amount,dueDay:+bF.dueDay||0,month:now.getMonth(),year:now.getFullYear(),isInstallment:false}];setBills(u);await save("bills",u);setModal(null);setBF({description:"",category:"Servicios",amount:"",dueDay:""});};
+  const del=async id=>{const u=bills.filter(x=>x.id!==id);setBills(u);await save("bills",u);};
+  const grouped={};
+  [...bills].sort((a,b)=>{const ay=a.year||now.getFullYear(),am=a.month??now.getMonth(),by=b.year||now.getFullYear(),bm=b.month??now.getMonth();return ay!==by?ay-by:am-bm;}).forEach(b=>{const m=b.month??now.getMonth(),y=b.year??now.getFullYear(),k=`${y}-${m}`;if(!grouped[k])grouped[k]={m,y,items:[]};grouped[k].items.push(b);});
+
+  return <div style={{padding:"0 1rem 90px",animation:"fadeIn .25s ease"}}>
+    <div style={{padding:"1.25rem 0 0.75rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div><div style={{fontSize:"0.6rem",color:"#f59e0b",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em"}}>Módulo</div><div style={{fontSize:"1.3rem",fontWeight:800,color:"#fff"}}>Cuotas y Compromisos</div></div>
+      <Btn onClick={()=>setModal("add")} color="#f59e0b" style={{color:"#000",padding:"0.5rem 0.8rem"}}><Ic n="plus" s={14}/></Btn>
+    </div>
+    {bills.length===0?<div style={{textAlign:"center",color:"#222",padding:"3rem",fontSize:"0.85rem"}}>Sin compromisos registrados.</div>
+    :Object.keys(grouped).map(key=>{
+      const {m,y,items}=grouped[key];
+      const isCurrent=m===now.getMonth()&&y===now.getFullYear();
+      const groupTotal=items.reduce((a,b)=>a+b.amount,0);
+      return <div key={key} style={{marginBottom:"1.25rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem",padding:"0 0.1rem"}}>
+          <div style={{fontSize:"0.65rem",color:isCurrent?"#f59e0b":"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",alignItems:"center",gap:6}}>
+            {isCurrent&&<span style={{width:5,height:5,borderRadius:"50%",background:"#f59e0b",display:"inline-block"}}/>}
+            {MONTHS_S[m]} {y}
+          </div>
+          <span style={{fontSize:"0.68rem",color:"#333",fontFamily:"'JetBrains Mono',monospace"}}>{fmtARS(groupTotal)}</span>
+        </div>
+        {[...items].sort((a,b)=>(a.dueDay||99)-(b.dueDay||99)).map((b,i)=><div key={b.id} style={{display:"flex",alignItems:"center",gap:"0.7rem",padding:"0.65rem 0.85rem",background:"#0a0a0a",border:`1px solid ${b.isInstallment?"#f59e0b22":"#1a1a1a"}`,borderRadius:10,marginBottom:"0.35rem"}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#f59e0b",flexShrink:0}}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:"0.8rem",fontWeight:600,color:"#ddd",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.description}</div>
+            <div style={{fontSize:"0.6rem",color:"#444",marginTop:1,display:"flex",gap:6}}>
+              {b.dueDay>0&&<span>Día {b.dueDay}</span>}
+              <span>{b.category}</span>
+              {b.card&&<span style={{background:b.card==="Visa Santander"?"#3b82f618":"#06b6d418",color:b.card==="Visa Santander"?"#3b82f6":"#06b6d4",fontSize:"0.58rem",fontWeight:700,padding:"1px 5px",borderRadius:4}}>{b.card}</span>}
+            </div>
+          </div>
+          <div style={{fontSize:"0.82rem",fontWeight:700,color:"#f59e0b",fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap"}}>{fmtARS(b.amount)}</div>
+          <button onClick={()=>del(b.id)} style={{background:"none",border:"none",color:"#252525",cursor:"pointer",padding:4,display:"flex",borderRadius:6}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#252525"}><Ic n="trash" s={13}/></button>
+        </div>)}
+      </div>;
+    })}
+    {modal==="add"&&<Modal title="Nuevo compromiso" onClose={()=>setModal(null)}>
+      <Field label="Descripción"><input style={inpS} placeholder="Ej: Expensas, Cuota..." value={bF.description} onChange={e=>setBF(f=>({...f,description:e.target.value}))}/></Field>
+      <Field label="Categoría"><select style={inpS} value={bF.category} onChange={e=>setBF(f=>({...f,category:e.target.value}))}>{CATS.map(c=><option key={c}>{c}</option>)}</select></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.5rem"}}>
+        <Field label="Monto (ARS)"><input type="number" style={inpS} placeholder="0" value={bF.amount} onChange={e=>setBF(f=>({...f,amount:e.target.value}))}/></Field>
+        <Field label="Día vencimiento"><input type="number" style={inpS} placeholder="Ej: 1" min="1" max="31" value={bF.dueDay} onChange={e=>setBF(f=>({...f,dueDay:e.target.value}))}/></Field>
+      </div>
+      <div style={{display:"flex",gap:"0.5rem",justifyContent:"flex-end",marginTop:"0.25rem"}}>
+        <Btn ghost onClick={()=>setModal(null)}>Cancelar</Btn>
+        <Btn onClick={addBill} color="#f59e0b" style={{color:"#000"}}><Ic n="plus" s={13}/>Guardar</Btn>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+// ─── INVESTMENTS ──────────────────────────────────────────────────────────────
+function InvestmentsScreen({investments,setInvestments}){
+  const [modal,setModal]=useState(null);
+  const [filter,setFilter]=useState("Todos");
+  const [updating,setUpdating]=useState(false);
+  const [updateMsg,setUpdateMsg]=useState("");
+  const [lastUpdate,setLastUpdate]=useState(null);
+  const [iF,setIF]=useState({ticker:"",name:"",type:"CEDEAR",qty:"",price:"",rendUSD:"",currency:"USD"});
+  const tabs=["Todos","CEDEAR","Acción","ON","Fondo"];
+  const filtered=filter==="Todos"?investments:investments.filter(i=>i.type===filter);
+  const total=investments.reduce((a,b)=>a+(b.qty*b.price),0);
+  const totalRend=investments.reduce((a,b)=>a+(b.rendUSD||0),0);
+  const costBasis=total-totalRend;
+  const rendPct=costBasis>0?(totalRend/costBasis)*100:0;
+  const byType=["CEDEAR","Acción","ON","Fondo"].map(t=>({t,val:investments.filter(i=>i.type===t).reduce((a,b)=>a+(b.qty*b.price),0),rend:investments.filter(i=>i.type===t).reduce((a,b)=>a+(b.rendUSD||0),0)})).filter(x=>x.val>0);
+  const addInv=async()=>{if(!iF.ticker||!iF.qty||!iF.price)return;const u=[...investments,{...iF,id:Date.now(),qty:+iF.qty,price:+iF.price,rendUSD:+iF.rendUSD||0}];setInvestments(u);await save("investments",u);setModal(null);setIF({ticker:"",name:"",type:"CEDEAR",qty:"",price:"",rendUSD:"",currency:"USD"});};
+  const delInv=async id=>{const u=investments.filter(x=>x.id!==id);setInvestments(u);await save("investments",u);};
+  const updatePrices=async()=>{
+    setUpdating(true);setUpdateMsg("Buscando precios...");
+    try{
+      const prices=await fetchPrices(investments.map(i=>i.ticker));
+      let cnt=0;
+      const newInv=investments.map(inv=>{const p=prices[inv.ticker];if(p&&p>0){cnt++;return{...inv,price:+p.toFixed(6),prevPrice:inv.price};}return inv;});
+      setInvestments(newInv);await save("investments",newInv);
+      const ts=new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+      setLastUpdate(ts);setUpdateMsg(`✓ ${cnt} precios actualizados · ${ts}`);
+      setTimeout(()=>setUpdateMsg(""),4000);
+    }catch(e){setUpdateMsg("Error: "+e.message);setTimeout(()=>setUpdateMsg(""),3000);}
+    setUpdating(false);
+  };
+
+  return <div style={{padding:"0 1rem 90px",animation:"fadeIn .25s ease"}}>
+    <div style={{padding:"1.25rem 0 0.75rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div><div style={{fontSize:"0.6rem",color:"#22c55e",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em"}}>Módulo</div><div style={{fontSize:"1.3rem",fontWeight:800,color:"#fff"}}>Inversiones</div></div>
+      <div style={{display:"flex",gap:6}}>
+        <Btn onClick={updatePrices} disabled={updating} color="#22c55e" sm style={{color:"#000"}}>
+          <span style={{display:"inline-flex",animation:updating?"spin 1s linear infinite":"none"}}><Ic n="refresh" s={13}/></span>{updating?"...":"Actualizar"}
+        </Btn>
+        <Btn ghost onClick={()=>setModal("add")} sm><Ic n="plus" s={13}/></Btn>
+      </div>
+    </div>
+    {updateMsg&&<div style={{background:updateMsg.startsWith("✓")?"#22c55e18":"#f59e0b18",border:`1px solid ${updateMsg.startsWith("✓")?"#22c55e33":"#f59e0b33"}`,borderRadius:10,padding:"0.6rem 0.9rem",marginBottom:"0.9rem",fontSize:"0.75rem",color:updateMsg.startsWith("✓")?"#22c55e":"#f59e0b"}}>{updateMsg}</div>}
+    <div style={{background:"#0d0d0d",border:"1px solid #22c55e22",borderLeft:"3px solid #22c55e",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1rem"}}>
+      <div style={{fontSize:"0.62rem",color:"#22c55e",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Portfolio Total</div>
+      <div style={{fontSize:"2rem",fontWeight:800,color:"#22c55e",fontFamily:"'JetBrains Mono',monospace",letterSpacing:"-0.04em"}}>{fmtUSD2(total)}</div>
+      {totalRend!==0&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
+        <span style={{fontSize:"0.78rem",fontWeight:700,color:totalRend>=0?"#22c55e":"#ef4444",fontFamily:"'JetBrains Mono',monospace"}}>{totalRend>=0?"+":""}{fmtUSD2(totalRend)}</span>
+        <span style={{fontSize:"0.68rem",color:totalRend>=0?"#22c55e55":"#ef444455",fontFamily:"'JetBrains Mono',monospace"}}>({totalRend>=0?"+":""}{rendPct.toFixed(1)}%)</span>
+        <span style={{fontSize:"0.62rem",color:"#333"}}>rendimiento</span>
+      </div>}
+      {lastUpdate&&<div style={{fontSize:"0.6rem",color:"#333",marginTop:4}}>Actualizado {lastUpdate}</div>}
+      <div style={{display:"flex",gap:"0.6rem",flexWrap:"wrap",marginTop:"0.85rem"}}>
+        {byType.map(({t,val,rend})=><div key={t} style={{background:`${TYPE_COLOR[t]}15`,border:`1px solid ${TYPE_COLOR[t]}30`,borderRadius:9,padding:"0.35rem 0.7rem"}}>
+          <div style={{fontSize:"0.58rem",color:TYPE_COLOR[t],fontWeight:700,textTransform:"uppercase"}}>{t}</div>
+          <div style={{fontSize:"0.8rem",color:"#ccc",fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>{fmtUSD(val)}</div>
+          {rend!==0&&<div style={{fontSize:"0.62rem",color:rend>=0?"#22c55e":"#ef4444",fontFamily:"'JetBrains Mono',monospace"}}>{rend>=0?"+":""}{fmtUSD(rend)}</div>}
+        </div>)}
+      </div>
+    </div>
+    <div style={{display:"flex",gap:5,marginBottom:"1rem",overflowX:"auto",paddingBottom:3}}>
+      {tabs.map(t=><button key={t} onClick={()=>setFilter(t)} style={{padding:"0.32rem 0.8rem",borderRadius:20,border:`1px solid ${filter===t?(TYPE_COLOR[t]||"#22c55e"):"#1a1a1a"}`,background:filter===t?`${TYPE_COLOR[t]||"#22c55e"}18`:"transparent",color:filter===t?(TYPE_COLOR[t]||"#22c55e"):"#333",cursor:"pointer",fontSize:"0.73rem",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>{t}</button>)}
+    </div>
+    {filtered.length===0?<div style={{textAlign:"center",color:"#222",padding:"3rem",fontSize:"0.85rem"}}>Sin posiciones</div>
+    :filtered.map((inv,i)=>{
+      const color=TYPE_COLOR[inv.type]||"#22c55e";
+      const valorTotal=inv.qty*inv.price;
+      const rend=inv.rendUSD||0;
+      const priceUp=inv.prevPrice&&inv.price>inv.prevPrice;
+      const priceChanged=inv.prevPrice&&Math.abs(inv.prevPrice-inv.price)>0.0001;
+      return <div key={inv.id} style={{background:"#0a0a0a",border:`1px solid ${color}15`,borderRadius:10,padding:"0.75rem 0.9rem",marginBottom:"0.4rem",animation:`fadeIn .25s ${i*.04}s both`}}>
+        <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
+          <div style={{background:`${color}15`,border:`1px solid ${color}30`,borderRadius:8,padding:"0.3rem 0.55rem",minWidth:60,textAlign:"center",flexShrink:0}}>
+            <div style={{fontSize:"0.7rem",fontWeight:800,color,fontFamily:"'JetBrains Mono',monospace"}}>{inv.ticker}</div>
+            <div style={{fontSize:"0.55rem",color:"#333",marginTop:1,fontWeight:600}}>{inv.type}</div>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:"0.8rem",fontWeight:600,color:"#ccc",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{inv.name||inv.ticker}</div>
+            <div style={{fontSize:"0.63rem",color:"#333",marginTop:1,display:"flex",alignItems:"center",gap:5}}>
+              <span>{inv.qty} u.</span>
+              <span style={{color:priceChanged?(priceUp?"#22c55e":"#ef4444"):"#333",fontFamily:"'JetBrains Mono',monospace"}}>{fmtUSD2(inv.price)}{priceChanged&&(priceUp?" ▲":" ▼")}</span>
+            </div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{fontSize:"0.88rem",fontWeight:700,color:"#22c55e",fontFamily:"'JetBrains Mono',monospace"}}>{fmtUSD(valorTotal)}</div>
+            {rend!==0&&<div style={{fontSize:"0.65rem",fontWeight:700,color:rend>0?"#22c55e":"#ef4444",fontFamily:"'JetBrains Mono',monospace"}}>{rend>0?"+":""}{fmtUSD(rend)}</div>}
+          </div>
+          <button onClick={()=>delInv(inv.id)} style={{background:"none",border:"none",color:"#252525",cursor:"pointer",padding:4,display:"flex",borderRadius:6}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#252525"}><Ic n="trash" s={13}/></button>
+        </div>
+      </div>;
+    })}
+    {modal==="add"&&<Modal title="Nueva inversión" onClose={()=>setModal(null)}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.5rem"}}>
+        <Field label="Ticker"><input style={inpS} placeholder="Ej: NVDA" value={iF.ticker} onChange={e=>setIF(f=>({...f,ticker:e.target.value.toUpperCase()}))}/></Field>
+        <Field label="Tipo"><select style={inpS} value={iF.type} onChange={e=>setIF(f=>({...f,type:e.target.value}))}>{INV_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
+      </div>
+      <Field label="Nombre"><input style={inpS} placeholder="Ej: Nvidia" value={iF.name} onChange={e=>setIF(f=>({...f,name:e.target.value}))}/></Field>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 75px",gap:"0.5rem"}}>
+        <Field label="Cantidad"><input type="number" style={inpS} placeholder="0" value={iF.qty} onChange={e=>setIF(f=>({...f,qty:e.target.value}))}/></Field>
+        <Field label="Precio USD"><input type="number" style={inpS} placeholder="0" value={iF.price} onChange={e=>setIF(f=>({...f,price:e.target.value}))}/></Field>
+        <Field label="Moneda"><select style={inpS} value={iF.currency} onChange={e=>setIF(f=>({...f,currency:e.target.value}))}><option>USD</option><option>ARS</option></select></Field>
+      </div>
+      <Field label="Rendimiento USD"><input type="number" style={inpS} placeholder="0" value={iF.rendUSD} onChange={e=>setIF(f=>({...f,rendUSD:e.target.value}))}/></Field>
+      <div style={{display:"flex",gap:"0.5rem",justifyContent:"flex-end",marginTop:"0.25rem"}}>
+        <Btn ghost onClick={()=>setModal(null)}>Cancelar</Btn>
+        <Btn onClick={addInv} color="#22c55e" style={{color:"#000"}}><Ic n="plus" s={13}/>Guardar</Btn>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────────
+function App(){
+  const [screen,setScreen]=useState("home");
+  const [expenses,setExpenses]=useState([]);
+  const [bills,setBills]=useState([]);
+  const [investments,setInvestments]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [filterMonth,setFilterMonth]=useState(now.getMonth());
+  const [filterYear,setFilterYear]=useState(now.getFullYear());
+
+  const init=async()=>{
+    const [e,b,inv,seeded,billsSeeded,expSeeded]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded")]);
+    if(!expSeeded&&(!e||e.length===0)){setExpenses(SEED_EXPENSES);await save("expenses",SEED_EXPENSES);await saveOne("expSeeded",true);}else{setExpenses(e||[]);}
+    if(!billsSeeded&&(!b||b.length===0)){const sb=buildSeedBills();setBills(sb);await save("bills",sb);await saveOne("billsSeeded",true);}else{setBills(b||[]);}
+    if(!seeded&&(!inv||inv.length===0)){setInvestments(SEED_INV);await save("investments",SEED_INV);await saveOne("seeded",true);}else{setInvestments(inv||[]);}
+    setLoading(false);
+  };
+
+  useEffect(()=>{ init(); },[]);
+
+  if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#000",fontFamily:"'JetBrains Mono',monospace"}}>
+    <div style={{textAlign:"center"}}>
+      <div style={{width:32,height:32,border:"2px solid #111",borderTopColor:"#22c55e",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 1rem"}}/>
+      <div style={{color:"#222",fontSize:"0.72rem"}}>Cargando CFO...</div>
+    </div>
+  </div>;
+
+  const navColors={home:"#fff",expenses:"#ef4444",bills:"#f59e0b",investments:"#22c55e"};
+  return <div style={{minHeight:"100vh",background:"#000",fontFamily:"'Outfit',system-ui,sans-serif",color:"#eee",maxWidth:520,margin:"0 auto"}}>
+    <div style={{paddingBottom:70}}>
+      {screen==="home"&&<Home expenses={expenses} bills={bills} investments={investments} onNav={setScreen} filterMonth={filterMonth} filterYear={filterYear} setFilterMonth={setFilterMonth} setFilterYear={setFilterYear}/>}
+      {screen==="expenses"&&<ExpensesScreen expenses={expenses} setExpenses={setExpenses} filterMonth={filterMonth} filterYear={filterYear} setFilterMonth={setFilterMonth} setFilterYear={setFilterYear}/>}
+      {screen==="bills"&&<BillsScreen bills={bills} setBills={setBills}/>}
+      {screen==="investments"&&<InvestmentsScreen investments={investments} setInvestments={setInvestments}/>}
+    </div>
+    <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:520,background:"rgba(0,0,0,.97)",borderTop:"1px solid #111",display:"grid",gridTemplateColumns:"repeat(4,1fr)",padding:"0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom))",zIndex:50}}>
+      {[["home","home","Inicio"],["expenses","wallet","Gastos"],["bills","calendar","Cuotas"],["investments","trend","Inversiones"]].map(([id,icon,label])=>{
+        const active=screen===id,color=navColors[id];
+        return <button key={id} onClick={()=>setScreen(id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"0.3rem 0.5rem",border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit"}}>
+          <div style={{width:36,height:32,borderRadius:9,background:active?`${color}15`:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:active?color:"#2a2a2a"}}><Ic n={icon} s={17}/></div>
+          <span style={{fontSize:"0.58rem",fontWeight:active?700:500,color:active?color:"#2a2a2a"}}>{label}</span>
+        </button>;
+      })}
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
