@@ -217,8 +217,23 @@ function Home({expenses,bills,investments,onNav,filterMonth,filterYear,setFilter
   const recentExp=filtExp.slice().reverse().slice(0,4);
   const upcoming=[0,1,2].map(i=>{let m=(filterMonth+i)%12,y=filterYear+Math.floor((filterMonth+i)/12);const items=bills.filter(b=>(b.month??now.getMonth())===m&&(b.year??now.getFullYear())===y);return{m,y,total:items.reduce((a,b)=>a+b.amount,0),count:items.length};}).filter(x=>x.total>0);
 
+  // ── Insights ──
+  const prevM=(filterMonth-1+12)%12, prevY=filterMonth===0?filterYear-1:filterYear;
+  const prevExp=expenses.filter(e=>{const d=new Date(e.date);return d.getMonth()===prevM&&d.getFullYear()===prevY;});
+  const totalPrev=prevExp.reduce((a,b)=>a+b.amount,0);
+  const expDiff=totalPrev>0?((totalExp-totalPrev)/totalPrev)*100:null;
+  const bestInv=investments.length?[...investments].sort((a,b)=>(b.rendUSD||0)-(a.rendUSD||0))[0]:null;
+  const invRendPct=invUSD>0?((invRend/(invUSD-invRend))*100):0;
+  const nextM=(filterMonth+1)%12, nextY=filterMonth===11?filterYear+1:filterYear;
+  const nextBills=bills.filter(b=>(b.month??now.getMonth())===nextM&&(b.year??now.getFullYear())===nextY);
+  const nextBillsTotal=nextBills.reduce((a,b)=>a+b.amount,0);
+  const billsDiff=totalBills>0?((nextBillsTotal-totalBills)/totalBills)*100:null;
+  const topCat=catData[0]||null;
+
+  const Pill=({color,children})=><span style={{background:`${color}18`,color,fontSize:"0.65rem",fontWeight:700,padding:"2px 7px",borderRadius:20,fontFamily:"'JetBrains Mono',monospace"}}>{children}</span>;
+
   return <div style={{padding:"0 1rem 90px",animation:"fadeIn .3s ease"}}>
-    <div style={{padding:"1.5rem 0 1rem",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+    <div style={{padding:"1.5rem 0 0.85rem",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
       <div>
         <div style={{fontSize:"0.6rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.14em"}}>CFO</div>
         <div style={{fontSize:"1.5rem",fontWeight:800,color:"#fff",lineHeight:1.1}}>Controla Finanzas</div>
@@ -227,6 +242,49 @@ function Home({expenses,bills,investments,onNav,filterMonth,filterYear,setFilter
         <select style={{...inpS,width:68,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterMonth} onChange={e=>setFilterMonth(+e.target.value)}>{MONTHS_S.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
         <select style={{...inpS,width:66,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterYear} onChange={e=>setFilterYear(+e.target.value)}>{[now.getFullYear(),now.getFullYear()-1].map(y=><option key={y}>{y}</option>)}</select>
       </div>
+    </div>
+
+    {/* ── Highlights ── */}
+    <div style={{display:"flex",flexDirection:"column",gap:"0.45rem",marginBottom:"1rem"}}>
+      {expDiff!==null&&<div style={{background:"#0a0a0a",border:`1px solid ${expDiff>0?"#ef444422":"#22c55e22"}`,borderLeft:`3px solid ${expDiff>0?"#ef4444":"#22c55e"}`,borderRadius:12,padding:"0.7rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:"0.58rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Gastos vs {MONTHS_S[prevM]}</div>
+          <div style={{fontSize:"0.82rem",color:"#ccc",marginTop:2}}>{expDiff>0?"Gastás más este mes":"Gastás menos este mes"}</div>
+        </div>
+        <Pill color={expDiff>0?"#ef4444":"#22c55e"}>{expDiff>0?"▲":"▼"} {Math.abs(expDiff).toFixed(1)}%</Pill>
+      </div>}
+
+      {bestInv&&bestInv.rendUSD>0&&<div style={{background:"#0a0a0a",border:"1px solid #22c55e22",borderLeft:"3px solid #22c55e",borderRadius:12,padding:"0.7rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:"0.58rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Mejor inversión</div>
+          <div style={{fontSize:"0.82rem",color:"#ccc",marginTop:2}}>{bestInv.ticker} · {bestInv.name}</div>
+        </div>
+        <Pill color="#22c55e">+{fmtUSD(bestInv.rendUSD)}</Pill>
+      </div>}
+
+      {invRend!==0&&<div style={{background:"#0a0a0a",border:`1px solid ${invRend>=0?"#22c55e22":"#ef444422"}`,borderLeft:`3px solid ${invRend>=0?"#22c55e":"#ef4444"}`,borderRadius:12,padding:"0.7rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:"0.58rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Rendimiento portfolio</div>
+          <div style={{fontSize:"0.82rem",color:"#ccc",marginTop:2}}>{fmtUSD2(invUSD)} en total</div>
+        </div>
+        <Pill color={invRend>=0?"#22c55e":"#ef4444"}>{invRend>=0?"+":""}{invRendPct.toFixed(1)}%</Pill>
+      </div>}
+
+      {topCat&&<div style={{background:"#0a0a0a",border:"1px solid #1c1c1c",borderLeft:`3px solid ${topCat.color}`,borderRadius:12,padding:"0.7rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:"0.58rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Mayor gasto · {MONTHS_S[filterMonth]}</div>
+          <div style={{fontSize:"0.82rem",color:"#ccc",marginTop:2}}>{topCat.name}</div>
+        </div>
+        <Pill color={topCat.color}>{Math.round((topCat.value/total)*100)}% del total</Pill>
+      </div>}
+
+      {billsDiff!==null&&Math.abs(billsDiff)>5&&<div style={{background:"#0a0a0a",border:`1px solid ${billsDiff>0?"#f59e0b22":"#22c55e22"}`,borderLeft:`3px solid ${billsDiff>0?"#f59e0b":"#22c55e"}`,borderRadius:12,padding:"0.7rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:"0.58rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Cuotas próximo mes</div>
+          <div style={{fontSize:"0.82rem",color:"#ccc",marginTop:2}}>{billsDiff>0?"Suben en":"Bajan en"} {MONTHS_S[nextM]}</div>
+        </div>
+        <Pill color={billsDiff>0?"#f59e0b":"#22c55e"}>{billsDiff>0?"▲":"▼"} {Math.abs(billsDiff).toFixed(0)}%</Pill>
+      </div>}
     </div>
 
     {catData.length>0 ? (
