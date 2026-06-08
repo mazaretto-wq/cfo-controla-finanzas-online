@@ -100,24 +100,32 @@ const SEED_EXPENSES = [
 ].map((e,i)=>({...e,id:9000000+i}));
 
 const SEED_INSTALLMENTS = [
-  {description:"Adidas (PAYU)",        amount:29833,     cur:6, tot:6,  rem:1, cat:"Ropa"},
-  {description:"Adidas (MercadoPago)", amount:18999.78,  cur:5, tot:6,  rem:2, cat:"Ropa"},
-  {description:"Sporting",             amount:8333.33,   cur:3, tot:3,  rem:1, cat:"Entretenimiento"},
-  {description:"Adidas (PAYU) #2",     amount:17583,     cur:3, tot:6,  rem:4, cat:"Ropa"},
-  {description:"Cetrogar SA",          amount:34966.33,  cur:3, tot:3,  rem:1, cat:"Hogar"},
-  {description:"Fravega",              amount:16499.33,  cur:3, tot:3,  rem:1, cat:"Hogar"},
-  {description:"Dexter Panamericana",  amount:39099,     cur:2, tot:2,  rem:1, cat:"Ropa"},
-  {description:"Dexter (MercadoPago)", amount:9999.66,   cur:2, tot:3,  rem:2, cat:"Ropa"},
-  {description:"Solo Deportes",        amount:26666.33,  cur:2, tot:6,  rem:5, cat:"Ropa"},
-  {description:"Adidas Argentina",     amount:36666.34,  cur:1, tot:3,  rem:3, cat:"Ropa"},
-  {description:"Electrónica FL",       amount:102083.25, cur:1, tot:12, rem:12,cat:"Hogar"},
+  // Visa Santander — arrancan Mayo 2026 (m:4)
+  {description:"Adidas (PAYU)",        amount:29833,     cur:6, tot:6,  rem:1, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Adidas (MercadoPago)", amount:18999.78,  cur:5, tot:6,  rem:2, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Sporting",             amount:8333.33,   cur:3, tot:3,  rem:1, cat:"Entretenimiento", startM:4, card:"Visa Santander"},
+  {description:"Adidas (PAYU) #2",     amount:17583,     cur:3, tot:6,  rem:4, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Cetrogar SA",          amount:34966.33,  cur:3, tot:3,  rem:1, cat:"Hogar",           startM:4, card:"Visa Santander"},
+  {description:"Fravega",              amount:16499.33,  cur:3, tot:3,  rem:1, cat:"Hogar",           startM:4, card:"Visa Santander"},
+  {description:"Dexter Panamericana",  amount:39099,     cur:2, tot:2,  rem:1, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Dexter (MercadoPago)", amount:9999.66,   cur:2, tot:3,  rem:2, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Solo Deportes",        amount:26666.33,  cur:2, tot:6,  rem:5, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Adidas Argentina",     amount:36666.34,  cur:1, tot:3,  rem:3, cat:"Ropa",            startM:4, card:"Visa Santander"},
+  {description:"Electrónica FL",       amount:102083.25, cur:1, tot:12, rem:12,cat:"Hogar",           startM:4, card:"Visa Santander"},
+  // Mercado Pago — arrancan Junio 2026 (m:5)
+  {description:"Lakobrasa (MP)",       amount:20999.37,  cur:3, tot:3,  rem:1, cat:"Comida",          startM:5, card:"Mercado Pago"},
+  {description:"Adidas (MP)",          amount:7083.26,   cur:2, tot:12, rem:11,cat:"Ropa",            startM:5, card:"Mercado Pago"},
+  {description:"Panmar (MP) A",        amount:33333.33,  cur:2, tot:3,  rem:2, cat:"Hogar",           startM:5, card:"Mercado Pago"},
+  {description:"Panmar (MP) B",        amount:16666.66,  cur:1, tot:3,  rem:3, cat:"Hogar",           startM:5, card:"Mercado Pago"},
+  {description:"MercaColubre (MP)",    amount:53660.15,  cur:1, tot:6,  rem:6, cat:"Hogar",           startM:5, card:"Mercado Pago"},
 ];
 function buildSeedBills() {
-  const bills=[], base={m:4,y:2026};
+  const bills=[];
   SEED_INSTALLMENTS.forEach(item=>{
+    const base={m:item.startM??4, y:2026};
     for(let i=0;i<item.rem;i++){
       let m=base.m+i, y=base.y+Math.floor(m/12); m=m%12;
-      bills.push({id:Math.floor(Math.random()*1e9)+i,description:`${item.description} (${item.cur+i}/${item.tot})`,category:item.cat,amount:item.amount,dueDay:1,month:m,year:y,isInstallment:true,card:"Visa Santander"});
+      bills.push({id:Math.floor(Math.random()*1e9)+i,description:`${item.description} (${item.cur+i}/${item.tot})`,category:item.cat,amount:item.amount,dueDay:1,month:m,year:y,isInstallment:true,card:item.card||"Visa Santander"});
     }
   });
   return bills;
