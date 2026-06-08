@@ -75,6 +75,12 @@ const SEED_EXPENSES = [
   {date:"2026-05-18",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
   {date:"2026-05-18",description:"PedidosYa Market",     category:"Comida",     amount:11770,     card:"Visa Santander"},
   {date:"2026-05-19",description:"Pinasmposnet",         category:"Comida",     amount:7020,     card:"Visa Santander"},
+  // Mercado Pago — cargos del resumen de Junio 2026
+  {date:"2026-03-12",description:"Lakobrasa (3/3)",      category:"Comida",     amount:20999.37, card:"Mercado Pago"},
+  {date:"2026-04-20",description:"Adidas (2/12)",         category:"Ropa",       amount:7083.26,  card:"Mercado Pago"},
+  {date:"2026-05-02",description:"Panmar (2/3)",          category:"Hogar",      amount:33333.33, card:"Mercado Pago"},
+  {date:"2026-05-06",description:"Panmar (1/3)",          category:"Hogar",      amount:16666.66, card:"Mercado Pago"},
+  {date:"2026-05-12",description:"MercaColubre (1/6)",    category:"Hogar",      amount:53660.15, card:"Mercado Pago"},
   // Junio 2026
   {date:"2026-05-22",description:"Carrefour Vte López",  category:"Comida",     amount:8340.20,  card:"Visa Santander"},
   {date:"2026-05-23",description:"Pinasmposnet",         category:"Comida",     amount:8500,     card:"Visa Santander"},
@@ -247,7 +253,7 @@ function Home({expenses,bills,investments,onNav,filterMonth,filterYear,setFilter
   const catData=CATS.map(c=>({name:c,value:filtExp.filter(e=>e.category===c).reduce((a,b)=>a+b.amount,0),color:CAT_COLORS[c]})).filter(c=>c.value>0).sort((a,b)=>b.value-a.value);
   const total=catData.reduce((a,b)=>a+b.value,0);
   const recentExp=filtExp.slice().reverse().slice(0,4);
-  const upcoming=[0,1,2].map(i=>{let m=(filterMonth+i)%12,y=filterYear+Math.floor((filterMonth+i)/12);const items=bills.filter(b=>(b.month??now.getMonth())===m&&(b.year??now.getFullYear())===y);return{m,y,total:items.reduce((a,b)=>a+b.amount,0),count:items.length};}).filter(x=>x.total>0);
+  const upcoming=[0,1,2].map(i=>{let m=(filterMonth+i)%12,y=filterYear+Math.floor((filterMonth+i)/12);const items=bills.filter(b=>(b.month??now.getMonth())===m&&(b.year??now.getFullYear())===y);const byCard=[...new Set(items.map(b=>b.card).filter(Boolean))].map(c=>({card:c,total:items.filter(b=>b.card===c).reduce((a,b)=>a+b.amount,0)}));return{m,y,total:items.reduce((a,b)=>a+b.amount,0),count:items.length,byCard};}).filter(x=>x.total>0);
 
   // ── Insights ──
   const prevM=(filterMonth-1+12)%12, prevY=filterMonth===0?filterYear-1:filterYear;
@@ -363,10 +369,17 @@ function Home({expenses,bills,investments,onNav,filterMonth,filterYear,setFilter
     {upcoming.length>0&&<div style={{marginBottom:"1.25rem"}}>
       <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.55rem"}}>Proyección cuotas</div>
       <div style={{display:"flex",gap:"0.5rem"}}>
-        {upcoming.map(({m,y,total,count})=><div key={`${y}-${m}`} style={{flex:1,background:"#0a0a0a",border:"1px solid #f59e0b22",borderRadius:10,padding:"0.65rem 0.75rem",textAlign:"center"}}>
+        {upcoming.map(({m,y,total,count,byCard})=><div key={`${y}-${m}`} style={{flex:1,background:"#0a0a0a",border:"1px solid #f59e0b22",borderRadius:10,padding:"0.65rem 0.75rem",textAlign:"center"}}>
           <div style={{fontSize:"0.6rem",color:"#f59e0b",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{MONTHS_S[m]}</div>
           <div style={{fontSize:"0.85rem",fontWeight:800,color:"#f59e0b",fontFamily:"'JetBrains Mono',monospace"}}>{fmtShort(total)}</div>
           <div style={{fontSize:"0.58rem",color:"#333",marginTop:2}}>{count} cuotas</div>
+          {byCard.length>1&&<div style={{marginTop:"0.45rem",paddingTop:"0.4rem",borderTop:"1px solid #1a1a1a",display:"flex",flexDirection:"column",gap:2}}>
+            {byCard.map(({card,total:ct})=><div key={card} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:4}}>
+              <span style={{width:4,height:4,borderRadius:"50%",background:CARD_COLOR[card]||"#3b82f6",flexShrink:0,display:"inline-block"}}/>
+              <span style={{fontSize:"0.55rem",color:CARD_COLOR[card]||"#3b82f6",fontWeight:700,flex:1,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.replace("Visa Santander","Visa").replace("Mercado Pago","MP")}</span>
+              <span style={{fontSize:"0.6rem",color:"#555",fontFamily:"'JetBrains Mono',monospace"}}>{fmtShort(ct)}</span>
+            </div>)}
+          </div>}
         </div>)}
       </div>
     </div>}
@@ -388,10 +401,14 @@ function Home({expenses,bills,investments,onNav,filterMonth,filterYear,setFilter
 // ─── EXPENSES ─────────────────────────────────────────────────────────────────
 function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMonth,setFilterYear}){
   const [modal,setModal]=useState(null);
+  const [cardFilter,setCardFilter]=useState("Todos");
   const [eF,setEF]=useState({date:now.toISOString().slice(0,10),description:"",category:"Comida",amount:"",card:"Visa Santander"});
   const filtExp=expenses.filter(e=>{const d=new Date(e.date);return d.getMonth()===filterMonth&&d.getFullYear()===filterYear;});
+  const activeCards=[...new Set(filtExp.map(e=>e.card).filter(Boolean))].sort();
+  const displayExp=cardFilter==="Todos"?filtExp:filtExp.filter(e=>e.card===cardFilter);
   const totalExp=filtExp.reduce((a,b)=>a+b.amount,0);
-  const catData=CATS.map(c=>({name:c,val:filtExp.filter(e=>e.category===c).reduce((a,b)=>a+b.amount,0)})).filter(c=>c.val>0).sort((a,b)=>b.val-a.val);
+  const cardTotals=activeCards.map(c=>({card:c,total:filtExp.filter(e=>e.card===c).reduce((a,b)=>a+b.amount,0)}));
+  const catData=CATS.map(c=>({name:c,val:displayExp.filter(e=>e.category===c).reduce((a,b)=>a+b.amount,0)})).filter(c=>c.val>0).sort((a,b)=>b.val-a.val);
   const maxCat=catData[0]?.val||1;
   const addExp=async()=>{if(!eF.description||!eF.amount)return;const u=[...expenses,{...eF,id:Date.now(),amount:+eF.amount}];setExpenses(u);await save("expenses",u);setModal(null);setEF({date:now.toISOString().slice(0,10),description:"",category:"Comida",amount:"",card:"Visa Santander"});};
   const delExp=async id=>{const u=expenses.filter(x=>x.id!==id);setExpenses(u);await save("expenses",u);};
@@ -404,13 +421,22 @@ function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMo
         <select style={{...inpS,width:64,padding:"0.35rem 0.5rem",fontSize:"0.72rem"}} value={filterYear} onChange={e=>setFilterYear(+e.target.value)}>{[now.getFullYear(),now.getFullYear()-1].map(y=><option key={y}>{y}</option>)}</select>
       </div>
     </div>
-    <div style={{background:"#0d0d0d",border:"1px solid #ef444422",borderLeft:"3px solid #ef4444",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"1rem"}}>
+    <div style={{background:"#0d0d0d",border:"1px solid #ef444422",borderLeft:"3px solid #ef4444",borderRadius:14,padding:"1rem 1.25rem",marginBottom:"0.75rem"}}>
       <div style={{fontSize:"0.62rem",color:"#ef4444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Total {MONTHS[filterMonth]}</div>
       <div style={{fontSize:"2rem",fontWeight:800,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",letterSpacing:"-0.04em"}}>{fmtARS(totalExp)}</div>
       <div style={{fontSize:"0.68rem",color:"#333",marginTop:2}}>{filtExp.length} transacciones</div>
+      {cardTotals.length>1&&<div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginTop:"0.65rem",paddingTop:"0.65rem",borderTop:"1px solid #1a1a1a"}}>
+        {cardTotals.map(({card,total})=><div key={card} style={{background:`${CARD_COLOR[card]||"#3b82f6"}15`,border:`1px solid ${CARD_COLOR[card]||"#3b82f6"}30`,borderRadius:8,padding:"0.3rem 0.65rem"}}>
+          <div style={{fontSize:"0.58rem",color:CARD_COLOR[card]||"#3b82f6",fontWeight:700}}>{card}</div>
+          <div style={{fontSize:"0.75rem",color:"#ccc",fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}>{fmtARS(total)}</div>
+        </div>)}
+      </div>}
     </div>
+    {activeCards.length>1&&<div style={{display:"flex",gap:5,marginBottom:"0.75rem",overflowX:"auto",paddingBottom:2}}>
+      {["Todos",...activeCards].map(c=>{const col=c==="Todos"?"#ef4444":(CARD_COLOR[c]||"#3b82f6");return <button key={c} onClick={()=>setCardFilter(c)} style={{padding:"0.28rem 0.75rem",borderRadius:20,border:`1px solid ${cardFilter===c?col:"#1a1a1a"}`,background:cardFilter===c?`${col}18`:"transparent",color:cardFilter===c?col:"#333",cursor:"pointer",fontSize:"0.7rem",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>{c}</button>;})}
+    </div>}
     {catData.length>0&&<div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:14,padding:"1rem",marginBottom:"1rem"}}>
-      <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.75rem"}}>Por categoría</div>
+      <div style={{fontSize:"0.62rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.75rem"}}>Por categoría{cardFilter!=="Todos"?` · ${cardFilter}`:""}</div>
       {catData.map(c=><div key={c.name} style={{marginBottom:"0.5rem"}}>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.75rem",marginBottom:3}}>
           <span style={{color:"#888",display:"flex",alignItems:"center",gap:5}}><span style={{width:6,height:6,borderRadius:"50%",background:CAT_COLORS[c.name],display:"inline-block"}}/>{c.name}</span>
@@ -422,8 +448,8 @@ function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMo
     <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem"}}>
       <Btn onClick={()=>setModal("add")} color="#ef4444" style={{flex:1,color:"#fff"}}><Ic n="plus" s={14}/>Agregar gasto</Btn>
     </div>
-    {filtExp.length===0?<div style={{textAlign:"center",color:"#222",padding:"3rem",fontSize:"0.85rem"}}>Sin gastos en {MONTHS[filterMonth]}</div>
-    :filtExp.slice().reverse().map((e,i)=><div key={e.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.7rem 0.85rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,marginBottom:"0.4rem",animation:`fadeIn .25s ${i*.03}s both`}}>
+    {displayExp.length===0?<div style={{textAlign:"center",color:"#222",padding:"3rem",fontSize:"0.85rem"}}>Sin gastos{cardFilter!=="Todos"?` de ${cardFilter}`:""} en {MONTHS[filterMonth]}</div>
+    :displayExp.slice().reverse().map((e,i)=><div key={e.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.7rem 0.85rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,marginBottom:"0.4rem",animation:`fadeIn .25s ${i*.03}s both`}}>
       <div style={{width:32,height:32,borderRadius:9,background:`${CAT_COLORS[e.category]}15`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:7,height:7,borderRadius:"50%",background:CAT_COLORS[e.category]}}/></div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:"0.82rem",fontWeight:600,color:"#ddd",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.description}</div>
@@ -629,21 +655,30 @@ function App(){
   const [filterMonth,setFilterMonth]=useState(now.getMonth());
   const [filterYear,setFilterYear]=useState(now.getFullYear());
 
-  const DATA_VERSION=2;
+  const DATA_VERSION=3;
   const init=async()=>{
     const [e,b,inv,seeded,billsSeeded,expSeeded,dataVer]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded"),loadOne("dataVersion")]);
     const ver=dataVer||0;
 
     // Gastos
     if(!expSeeded&&(!e||e.length===0)){setExpenses(SEED_EXPENSES);await save("expenses",SEED_EXPENSES);await saveOne("expSeeded",true);}
-    else if(ver<2){
-      // Migración v2: agregar gastos nuevos que no existan aún
-      const existing=e||[];
-      const existingIds=new Set(existing.map(x=>x.id));
-      const toAdd=SEED_EXPENSES.filter(x=>!existingIds.has(x.id)&&new Date(x.date)>=new Date("2026-05-22"));
-      const merged=[...existing,...toAdd];
-      setExpenses(merged);await save("expenses",merged);
-    } else {setExpenses(e||[]);}
+    else {
+      let existing=e||[];
+      if(ver<2){
+        // v2: agregar gastos desde 2026-05-22
+        const existingKeys=new Set(existing.map(x=>x.description+"_"+x.date));
+        const toAdd=SEED_EXPENSES.filter(x=>!existingKeys.has(x.description+"_"+x.date)&&new Date(x.date)>=new Date("2026-05-22"));
+        existing=[...existing,...toAdd];
+      }
+      if(ver<3){
+        // v3: agregar 5 gastos de Mercado Pago (antes de may-22)
+        const mpExpenses=SEED_EXPENSES.filter(x=>x.card==="Mercado Pago"&&new Date(x.date)<new Date("2026-05-22"));
+        const existingKeys=new Set(existing.map(x=>x.description+"_"+x.date));
+        const toAdd=mpExpenses.filter(x=>!existingKeys.has(x.description+"_"+x.date));
+        existing=[...existing,...toAdd];
+      }
+      setExpenses(existing);await save("expenses",existing);
+    }
 
     // Cuotas
     if(!billsSeeded&&(!b||b.length===0)){const sb=buildSeedBills();setBills(sb);await save("bills",sb);await saveOne("billsSeeded",true);}
