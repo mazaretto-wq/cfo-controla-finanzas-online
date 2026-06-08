@@ -629,11 +629,40 @@ function App(){
   const [filterMonth,setFilterMonth]=useState(now.getMonth());
   const [filterYear,setFilterYear]=useState(now.getFullYear());
 
+  const DATA_VERSION=2;
   const init=async()=>{
-    const [e,b,inv,seeded,billsSeeded,expSeeded]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded")]);
-    if(!expSeeded&&(!e||e.length===0)){setExpenses(SEED_EXPENSES);await save("expenses",SEED_EXPENSES);await saveOne("expSeeded",true);}else{setExpenses(e||[]);}
-    if(!billsSeeded&&(!b||b.length===0)){const sb=buildSeedBills();setBills(sb);await save("bills",sb);await saveOne("billsSeeded",true);}else{setBills(b||[]);}
+    const [e,b,inv,seeded,billsSeeded,expSeeded,dataVer]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded"),loadOne("dataVersion")]);
+    const ver=dataVer||0;
+
+    // Gastos
+    if(!expSeeded&&(!e||e.length===0)){setExpenses(SEED_EXPENSES);await save("expenses",SEED_EXPENSES);await saveOne("expSeeded",true);}
+    else if(ver<2){
+      // Migración v2: agregar gastos nuevos que no existan aún
+      const existing=e||[];
+      const existingIds=new Set(existing.map(x=>x.id));
+      const toAdd=SEED_EXPENSES.filter(x=>!existingIds.has(x.id)&&new Date(x.date)>=new Date("2026-05-22"));
+      const merged=[...existing,...toAdd];
+      setExpenses(merged);await save("expenses",merged);
+    } else {setExpenses(e||[]);}
+
+    // Cuotas
+    if(!billsSeeded&&(!b||b.length===0)){const sb=buildSeedBills();setBills(sb);await save("bills",sb);await saveOne("billsSeeded",true);}
+    else if(ver<2){
+      // Migración v2: agregar cuotas de Mercado Pago si no existen
+      const existing=b||[];
+      const hasMp=existing.some(x=>x.card==="Mercado Pago");
+      if(!hasMp){
+        const allBills=buildSeedBills();
+        const mpBills=allBills.filter(x=>x.card==="Mercado Pago");
+        const merged=[...existing,...mpBills];
+        setBills(merged);await save("bills",merged);
+      } else {setBills(existing);}
+    } else {setBills(b||[]);}
+
+    // Inversiones
     if(!seeded&&(!inv||inv.length===0)){setInvestments(SEED_INV);await save("investments",SEED_INV);await saveOne("seeded",true);}else{setInvestments(inv||[]);}
+
+    if(ver<DATA_VERSION) await saveOne("dataVersion",DATA_VERSION);
     setLoading(false);
   };
 
