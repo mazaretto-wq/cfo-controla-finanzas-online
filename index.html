@@ -75,6 +75,7 @@ const SEED_EXPENSES = [
   {date:"2026-05-18",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
   {date:"2026-05-18",description:"PedidosYa Market",     category:"Comida",     amount:11770,     card:"Visa Santander"},
   {date:"2026-05-19",description:"Pinasmposnet",         category:"Ocio",     amount:7020,     card:"Visa Santander"},
+  {date:"2026-05-15",description:"Cirnica (1/12)",       category:"Hogar",    amount:102083.25,card:"Visa Santander"},
   // Mercado Pago — cargos del resumen de Junio 2026
   {date:"2026-03-12",description:"Lakobrasa (3/3)",      category:"Comida",     amount:20999.37, card:"Mercado Pago"},
   {date:"2026-04-20",description:"Adidas (2/12)",         category:"Ropa",       amount:7083.26,  card:"Mercado Pago"},
@@ -107,7 +108,7 @@ const SEED_INSTALLMENTS = [
   {description:"Dexter (MercadoPago)", amount:9999.66,   cur:2, tot:3,  rem:2, cat:"Ropa",            startM:4, card:"Visa Santander"},
   {description:"Solo Deportes",        amount:26666.33,  cur:2, tot:6,  rem:5, cat:"Ropa",            startM:4, card:"Visa Santander"},
   {description:"Adidas Argentina",     amount:36666.34,  cur:1, tot:3,  rem:3, cat:"Ropa",            startM:4, card:"Visa Santander"},
-  {description:"Electrónica FL",       amount:102083.25, cur:1, tot:12, rem:12,cat:"Hogar",           startM:4, card:"Visa Santander"},
+  {description:"Cirnica",              amount:102083.25, cur:2, tot:12, rem:11,cat:"Hogar",           startM:5, card:"Visa Santander"},
   // Mercado Pago — arrancan Junio 2026 (m:5)
   {description:"Lakobrasa (MP)",       amount:20999.37,  cur:3, tot:3,  rem:1, cat:"Comida",          startM:5, card:"Mercado Pago"},
   {description:"Adidas (MP)",          amount:7083.26,   cur:2, tot:12, rem:11,cat:"Ropa",            startM:5, card:"Mercado Pago"},
@@ -645,7 +646,7 @@ function App(){
   const [filterMonth,setFilterMonth]=useState(now.getMonth());
   const [filterYear,setFilterYear]=useState(now.getFullYear());
 
-  const DATA_VERSION=4;
+  const DATA_VERSION=5;
   const init=async()=>{
     const [e,b,inv,seeded,billsSeeded,expSeeded,dataVer]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded"),loadOne("dataVersion")]);
     const ver=dataVer||0;
@@ -672,6 +673,11 @@ function App(){
         // v4: recategorizar Pinasmposnet de Comida a Ocio
         existing=existing.map(x=>x.description==="Pinasmposnet"?{...x,category:"Ocio"}:x);
       }
+      if(ver<5){
+        // v5: agregar gasto Cirnica (1/12) si no existe
+        const hasCircnica=existing.some(x=>x.description==="Cirnica (1/12)");
+        if(!hasCircnica) existing=[...existing,{date:"2026-05-15",description:"Cirnica (1/12)",category:"Hogar",amount:102083.25,card:"Visa Santander",id:9000999}];
+      }
       setExpenses(existing);await save("expenses",existing);
     }
 
@@ -687,7 +693,15 @@ function App(){
         const merged=[...existing,...mpBills];
         setBills(merged);await save("bills",merged);
       } else {setBills(existing);}
-    } else {setBills(b||[]);}
+    } else {
+      let existingB=b||[];
+      if(ver<5){
+        // v5: renombrar "Electrónica FL" a "Cirnica" en cuotas, eliminar cuota de mayo (ya es gasto)
+        existingB=existingB.filter(x=>!(x.description&&x.description.startsWith("Electrónica FL")&&x.month===4&&x.year===2026));
+        existingB=existingB.map(x=>x.description&&x.description.startsWith("Electrónica FL")?{...x,description:x.description.replace("Electrónica FL","Cirnica")}:x);
+      }
+      setBills(existingB);await save("bills",existingB);
+    }
 
     // Inversiones
     if(!seeded&&(!inv||inv.length===0)){setInvestments(SEED_INV);await save("investments",SEED_INV);await saveOne("seeded",true);}else{setInvestments(inv||[]);}
