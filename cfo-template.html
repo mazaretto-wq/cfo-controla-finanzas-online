@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CFO - Controla Finanzas Online</title>
+<!-- CFO Template — Abrí este archivo con Claude y pedile que cargue tus datos -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -42,76 +43,9 @@ async function saveOne(key, data) {
 }
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
-const SEED_EXPENSES = [
-  {date:"2026-04-23",description:"Pinasmposnet",         category:"Comida",     amount:4785,     card:"Visa Santander"},
-  {date:"2026-04-24",description:"Trámite Bs As GOB",    category:"Servicios",  amount:34200,     card:"Visa Santander"},
-  {date:"2026-04-24",description:"Salame y Queso",       category:"Comida",     amount:32500,     card:"Visa Santander"},
-  {date:"2026-04-26",description:"Hailing (transporte)", category:"Transporte", amount:41400,     card:"Visa Santander"},
-  {date:"2026-04-27",description:"Pinasmposnet",         category:"Comida",     amount:6750,     card:"Visa Santander"},
-  {date:"2026-04-27",description:"Combustible YPF",      category:"Transporte", amount:86071.92,     card:"Visa Santander"},
-  {date:"2026-04-27",description:"Carrefour Vte López",  category:"Comida",     amount:5140.85,     card:"Visa Santander"},
-  {date:"2026-04-28",description:"Pinasmposnet",         category:"Comida",     amount:6875,     card:"Visa Santander"},
-  {date:"2026-04-28",description:"El Parmegiano",        category:"Comida",     amount:19280,     card:"Visa Santander"},
-  {date:"2026-04-28",description:"Carrefour Vte López",  category:"Comida",     amount:3922.81,     card:"Visa Santander"},
-  {date:"2026-04-30",description:"Pinasmposnet",         category:"Comida",     amount:7000,     card:"Visa Santander"},
-  {date:"2026-04-30",description:"Carrefour Vte López",  category:"Comida",     amount:2099.86,     card:"Visa Santander"},
-  {date:"2026-05-02",description:"PedidosYa Market",     category:"Comida",     amount:15520,     card:"Visa Santander"},
-  {date:"2026-05-03",description:"McDonald's Ruta 8",    category:"Comida",     amount:62996,     card:"Visa Santander"},
-  {date:"2026-05-03",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
-  {date:"2026-05-04",description:"Pinasmposnet",         category:"Comida",     amount:12500,     card:"Visa Santander"},
-  {date:"2026-05-04",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
-  {date:"2026-05-04",description:"Combustible YPF",      category:"Transporte", amount:39999.92,     card:"Visa Santander"},
-  {date:"2026-05-04",description:"Havanna San Fernando", category:"Comida",     amount:10500,     card:"Visa Santander"},
-  {date:"2026-05-04",description:"PedidosYa Market",     category:"Comida",     amount:20520,     card:"Visa Santander"},
-  {date:"2026-05-05",description:"Carrefour Vte López",  category:"Comida",     amount:2699.82,     card:"Visa Santander"},
-  {date:"2026-05-09",description:"PedidosYa Propina",    category:"Comida",     amount:700,     card:"Visa Santander"},
-  {date:"2026-05-09",description:"PedidosYa Market",     category:"Comida",     amount:20520,     card:"Visa Santander"},
-  {date:"2026-05-09",description:"Old Man Family",       category:"Comida",     amount:9000,     card:"Visa Santander"},
-  {date:"2026-05-11",description:"Carrefour Vte López",  category:"Comida",     amount:11037,     card:"Visa Santander"},
-  {date:"2026-05-12",description:"Pinasmposnet",         category:"Comida",     amount:8120,     card:"Visa Santander"},
-  {date:"2026-05-14",description:"Pinasmposnet",         category:"Comida",     amount:9500,     card:"Visa Santander"},
-  {date:"2026-05-14",description:"Carrefour Vte López",  category:"Comida",     amount:587.79,     card:"Visa Santander"},
-  {date:"2026-05-16",description:"Old Man Family",       category:"Comida",     amount:4000,     card:"Visa Santander"},
-  {date:"2026-05-18",description:"PedidosYa Propina",    category:"Comida",     amount:650,     card:"Visa Santander"},
-  {date:"2026-05-18",description:"PedidosYa Market",     category:"Comida",     amount:11770,     card:"Visa Santander"},
-  {date:"2026-05-19",description:"Pinasmposnet",         category:"Comida",     amount:7020,     card:"Visa Santander"},
-  // Junio 2026
-  {date:"2026-05-22",description:"Carrefour Vte López",  category:"Comida",     amount:8340.20,  card:"Visa Santander"},
-  {date:"2026-05-23",description:"Pinasmposnet",         category:"Comida",     amount:8500,     card:"Visa Santander"},
-  {date:"2026-05-24",description:"PedidosYa Market",     category:"Comida",     amount:22000,    card:"Mercado Pago"},
-  {date:"2026-05-24",description:"PedidosYa Propina",    category:"Comida",     amount:750,      card:"Mercado Pago"},
-  {date:"2026-05-25",description:"Old Man Family",       category:"Comida",     amount:9500,     card:"Visa Santander"},
-  {date:"2026-05-26",description:"Combustible YPF",      category:"Transporte", amount:54999.92, card:"Visa Santander"},
-  {date:"2026-05-27",description:"Pinasmposnet",         category:"Comida",     amount:9000,     card:"Visa Santander"},
-  {date:"2026-05-28",description:"Carrefour Vte López",  category:"Comida",     amount:5120.50,  card:"Visa Santander"},
-  {date:"2026-05-29",description:"PedidosYa Market",     category:"Comida",     amount:19800,    card:"Mercado Pago"},
-  {date:"2026-05-29",description:"PedidosYa Propina",    category:"Comida",     amount:750,      card:"Mercado Pago"},
-  {date:"2026-05-30",description:"McDonald's Ruta 8",    category:"Comida",     amount:74500,    card:"Mercado Pago"},
-  {date:"2026-06-01",description:"Pinasmposnet",         category:"Comida",     amount:9500,     card:"Visa Santander"},
-  {date:"2026-06-02",description:"Carrefour Vte López",  category:"Comida",     amount:6780.90,  card:"Visa Santander"},
-  {date:"2026-06-03",description:"Hailing (transporte)", category:"Transporte", amount:48000,    card:"Mercado Pago"},
-  {date:"2026-06-04",description:"PedidosYa Market",     category:"Comida",     amount:21000,    card:"Mercado Pago"},
-  {date:"2026-06-04",description:"PedidosYa Propina",    category:"Comida",     amount:800,      card:"Mercado Pago"},
-  {date:"2026-06-05",description:"Combustible YPF",      category:"Transporte", amount:54999.92, card:"Visa Santander"},
-  {date:"2026-06-05",description:"Havanna San Fernando", category:"Comida",     amount:13500,    card:"Mercado Pago"},
-  {date:"2026-06-06",description:"Pinasmposnet",         category:"Comida",     amount:10000,    card:"Visa Santander"},
-  {date:"2026-06-07",description:"Old Man Family",       category:"Comida",     amount:11000,    card:"Visa Santander"},
-  {date:"2026-06-08",description:"Carrefour Vte López",  category:"Comida",     amount:7450.30,  card:"Visa Santander"},
-].map((e,i)=>({...e,id:9000000+i}));
+const SEED_EXPENSES = [];
 
-const SEED_INSTALLMENTS = [
-  {description:"Adidas (PAYU)",        amount:29833,     cur:6, tot:6,  rem:1, cat:"Ropa"},
-  {description:"Adidas (MercadoPago)", amount:18999.78,  cur:5, tot:6,  rem:2, cat:"Ropa"},
-  {description:"Sporting",             amount:8333.33,   cur:3, tot:3,  rem:1, cat:"Entretenimiento"},
-  {description:"Adidas (PAYU) #2",     amount:17583,     cur:3, tot:6,  rem:4, cat:"Ropa"},
-  {description:"Cetrogar SA",          amount:34966.33,  cur:3, tot:3,  rem:1, cat:"Hogar"},
-  {description:"Fravega",              amount:16499.33,  cur:3, tot:3,  rem:1, cat:"Hogar"},
-  {description:"Dexter Panamericana",  amount:39099,     cur:2, tot:2,  rem:1, cat:"Ropa"},
-  {description:"Dexter (MercadoPago)", amount:9999.66,   cur:2, tot:3,  rem:2, cat:"Ropa"},
-  {description:"Solo Deportes",        amount:26666.33,  cur:2, tot:6,  rem:5, cat:"Ropa"},
-  {description:"Adidas Argentina",     amount:36666.34,  cur:1, tot:3,  rem:3, cat:"Ropa"},
-  {description:"Electrónica FL",       amount:102083.25, cur:1, tot:12, rem:12,cat:"Hogar"},
-];
+const SEED_INSTALLMENTS = [];
 function buildSeedBills() {
   const bills=[], base={m:4,y:2026};
   SEED_INSTALLMENTS.forEach(item=>{
@@ -123,21 +57,7 @@ function buildSeedBills() {
   return bills;
 }
 
-const SEED_INV = [
-  {id:1, ticker:"ALUA",      name:"Aluar S.A.",             type:"Acción", qty:43,    price:0.658379,  rendUSD:0,  currency:"USD"},
-  {id:2, ticker:"BYMA",      name:"Bolsas y Mercados Arg.", type:"Acción", qty:68,    price:0.200109,  rendUSD:1,  currency:"USD"},
-  {id:3, ticker:"PAMP",      name:"Pampa Energía",          type:"Acción", qty:7,     price:3.355034,  rendUSD:0,  currency:"USD"},
-  {id:4, ticker:"AAPL",      name:"Apple Inc.",             type:"CEDEAR", qty:2,     price:16.078907, rendUSD:7,  currency:"USD"},
-  {id:5, ticker:"ACWI",      name:"iShares MSCI ACWI ETF",  type:"CEDEAR", qty:9,     price:6.261093,  rendUSD:3,  currency:"USD"},
-  {id:6, ticker:"IBB",       name:"iShares Nasdaq Biotech", type:"CEDEAR", qty:7,     price:6.517149,  rendUSD:1,  currency:"USD"},
-  {id:7, ticker:"LRCX",      name:"Lam Research Corp.",     type:"CEDEAR", qty:12,    price:5.668306,  rendUSD:23, currency:"USD"},
-  {id:8, ticker:"NOW",       name:"ServiceNow Inc.",        type:"CEDEAR", qty:32,    price:0.620497,  rendUSD:0,  currency:"USD"},
-  {id:9, ticker:"NVDA",      name:"Nvidia Corporation",     type:"CEDEAR", qty:20,    price:9.379363,  rendUSD:32, currency:"USD"},
-  {id:10,ticker:"SPY",       name:"SPDR S&P 500",           type:"CEDEAR", qty:8,     price:38.881913, rendUSD:28, currency:"USD"},
-  {id:11,ticker:"PN41O",     name:"ON Pan American Energy", type:"ON",     qty:98,    price:1.080345,  rendUSD:12, currency:"USD"},
-  {id:12,ticker:"BCRDOLARA", name:"Soberano Clase A",       type:"Fondo",  qty:73.44, price:1.454425,  rendUSD:1,  currency:"USD"},
-  {id:13,ticker:"BRTA",      name:"Renta Mixta Clase A",    type:"Fondo",  qty:133.07,price:0.489818,  rendUSD:6,  currency:"USD"},
-];
+const SEED_INV = [];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATS=["Comida","Transporte","Salud","Servicios","Entretenimiento","Ropa","Educación","Hogar","Suscripciones","Otro"];
