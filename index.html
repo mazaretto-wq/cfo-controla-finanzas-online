@@ -93,16 +93,6 @@ const SEED_EXPENSES = [
   {date:"2026-05-29",description:"PedidosYa Market",     category:"Comida",     amount:19800,    card:"Mercado Pago"},
   {date:"2026-05-29",description:"PedidosYa Propina",    category:"Comida",     amount:750,      card:"Mercado Pago"},
   {date:"2026-05-30",description:"McDonald's Ruta 8",    category:"Comida",     amount:74500,    card:"Mercado Pago"},
-  {date:"2026-06-01",description:"Pinasmposnet",         category:"Comida",     amount:9500,     card:"Visa Santander"},
-  {date:"2026-06-02",description:"Carrefour Vte López",  category:"Comida",     amount:6780.90,  card:"Visa Santander"},
-  {date:"2026-06-03",description:"Hailing (transporte)", category:"Transporte", amount:48000,    card:"Mercado Pago"},
-  {date:"2026-06-04",description:"PedidosYa Market",     category:"Comida",     amount:21000,    card:"Mercado Pago"},
-  {date:"2026-06-04",description:"PedidosYa Propina",    category:"Comida",     amount:800,      card:"Mercado Pago"},
-  {date:"2026-06-05",description:"Combustible YPF",      category:"Transporte", amount:54999.92, card:"Visa Santander"},
-  {date:"2026-06-05",description:"Havanna San Fernando", category:"Comida",     amount:13500,    card:"Mercado Pago"},
-  {date:"2026-06-06",description:"Pinasmposnet",         category:"Comida",     amount:10000,    card:"Visa Santander"},
-  {date:"2026-06-07",description:"Old Man Family",       category:"Comida",     amount:11000,    card:"Visa Santander"},
-  {date:"2026-06-08",description:"Carrefour Vte López",  category:"Comida",     amount:7450.30,  card:"Visa Santander"},
 ].map((e,i)=>({...e,id:9000000+i}));
 
 const SEED_INSTALLMENTS = [
@@ -671,7 +661,8 @@ function App(){
         existing=[...existing,...toAdd];
       }
       if(ver<3){
-        // v3: agregar 5 gastos de Mercado Pago (antes de may-22)
+        // v3: eliminar gastos de junio que no corresponden, agregar 5 gastos MP (antes de may-22)
+        existing=existing.filter(x=>!x.date||!x.date.startsWith("2026-06"));
         const mpExpenses=SEED_EXPENSES.filter(x=>x.card==="Mercado Pago"&&new Date(x.date)<new Date("2026-05-22"));
         const existingKeys=new Set(existing.map(x=>x.description+"_"+x.date));
         const toAdd=mpExpenses.filter(x=>!existingKeys.has(x.description+"_"+x.date));
