@@ -132,13 +132,13 @@ const SEED_INV = [
   {id:1, ticker:"ALUA",      name:"Aluar S.A.",             type:"Acción", qty:43,    price:0.658379,  rendUSD:0,  currency:"USD"},
   {id:2, ticker:"BYMA",      name:"Bolsas y Mercados Arg.", type:"Acción", qty:68,    price:0.200109,  rendUSD:1,  currency:"USD"},
   {id:3, ticker:"PAMP",      name:"Pampa Energía",          type:"Acción", qty:7,     price:3.355034,  rendUSD:0,  currency:"USD"},
-  {id:4, ticker:"AAPL",      name:"Apple Inc.",             type:"CEDEAR", qty:2,     price:16.078907, rendUSD:7,  currency:"USD"},
+  {id:4, ticker:"AAPL",      name:"Apple Inc.",             type:"CEDEAR", qty:2.8,   price:45,        rendUSD:7,  currency:"USD"},
   {id:5, ticker:"ACWI",      name:"iShares MSCI ACWI ETF",  type:"CEDEAR", qty:9,     price:6.261093,  rendUSD:3,  currency:"USD"},
   {id:6, ticker:"IBB",       name:"iShares Nasdaq Biotech", type:"CEDEAR", qty:7,     price:6.517149,  rendUSD:1,  currency:"USD"},
-  {id:7, ticker:"LRCX",      name:"Lam Research Corp.",     type:"CEDEAR", qty:12,    price:5.668306,  rendUSD:23, currency:"USD"},
+  {id:7, ticker:"LRCX",      name:"Lam Research Corp.",     type:"CEDEAR", qty:14.8,  price:84,        rendUSD:23, currency:"USD"},
   {id:8, ticker:"NOW",       name:"ServiceNow Inc.",        type:"CEDEAR", qty:32,    price:0.620497,  rendUSD:0,  currency:"USD"},
-  {id:9, ticker:"NVDA",      name:"Nvidia Corporation",     type:"CEDEAR", qty:20,    price:9.379363,  rendUSD:32, currency:"USD"},
-  {id:10,ticker:"SPY",       name:"SPDR S&P 500",           type:"CEDEAR", qty:8,     price:38.881913, rendUSD:28, currency:"USD"},
+  {id:9, ticker:"NVDA",      name:"Nvidia Corporation",     type:"CEDEAR", qty:21.4,  price:201,       rendUSD:32, currency:"USD"},
+  {id:10,ticker:"SPY",       name:"SPDR S&P 500",           type:"CEDEAR", qty:9,     price:351,       rendUSD:28, currency:"USD"},
   {id:11,ticker:"PN41O",     name:"ON Pan American Energy", type:"ON",     qty:98,    price:1.080345,  rendUSD:12, currency:"USD"},
   {id:12,ticker:"BCRDOLARA", name:"Soberano Clase A",       type:"Fondo",  qty:73.44, price:1.454425,  rendUSD:1,  currency:"USD"},
   {id:13,ticker:"BRTA",      name:"Renta Mixta Clase A",    type:"Fondo",  qty:133.07,price:0.489818,  rendUSD:6,  currency:"USD"},
@@ -646,7 +646,7 @@ function App(){
   const [filterMonth,setFilterMonth]=useState(now.getMonth());
   const [filterYear,setFilterYear]=useState(now.getFullYear());
 
-  const DATA_VERSION=5;
+  const DATA_VERSION=6;
   const init=async()=>{
     const [e,b,inv,seeded,billsSeeded,expSeeded,dataVer]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded"),loadOne("dataVersion")]);
     const ver=dataVer||0;
@@ -704,7 +704,16 @@ function App(){
     }
 
     // Inversiones
-    if(!seeded&&(!inv||inv.length===0)){setInvestments(SEED_INV);await save("investments",SEED_INV);await saveOne("seeded",true);}else{setInvestments(inv||[]);}
+    if(!seeded&&(!inv||inv.length===0)){setInvestments(SEED_INV);await save("investments",SEED_INV);await saveOne("seeded",true);}else{
+      let existingInv=inv||[];
+      if(ver<6){
+        // v6: actualizar qty y price de AAPL, NVDA, SPY, LRCX
+        const updates={AAPL:{qty:2.8,price:45},NVDA:{qty:21.4,price:201},SPY:{qty:9,price:351},LRCX:{qty:14.8,price:84}};
+        existingInv=existingInv.map(x=>updates[x.ticker]?{...x,...updates[x.ticker]}:x);
+        await save("investments",existingInv);
+      }
+      setInvestments(existingInv);
+    }
 
     if(ver<DATA_VERSION) await saveOne("dataVersion",DATA_VERSION);
     setLoading(false);
