@@ -723,10 +723,11 @@ function InvestmentsScreen({investments,setInvestments}){
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({onLogin}){
-  const [step,setStep]=useState("pick"); // "pick" | "pw"
+  const [step,setStep]=useState("pick");
   const [userId,setUserId]=useState(null);
   const [pw,setPw]=useState("");
   const [err,setErr]=useState("");
+  const G="#a3e635"; // lime accent
 
   const pickUser=id=>{setUserId(id);setPw("");setErr("");setStep("pw");};
   const submit=()=>{
@@ -735,38 +736,109 @@ function Login({onLogin}){
     else{setErr("Contraseña incorrecta");setPw("");}
   };
 
-  return <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit',system-ui,sans-serif"}}>
-    <div style={{width:"100%",maxWidth:340,padding:"0 1.5rem"}}>
-      <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-        <div style={{fontSize:"0.6rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.18em",marginBottom:6}}>CFO</div>
-        <div style={{fontSize:"2rem",fontWeight:800,color:"#fff",lineHeight:1.1}}>Controla Finanzas</div>
-      </div>
+  // ── Candlestick SVG ──
+  const W=400,H=180;
+  const py=v=>H-H*0.1-(v/100)*H*0.8;
+  const cd=[
+    [4,28,42,50,22],[12,42,34,46,28],[21,34,54,60,30],[30,54,47,62,43],
+    [39,47,63,69,44],[48,63,56,72,53],[57,56,74,80,53],[66,74,66,83,62],
+    [75,66,82,88,63],[84,82,75,90,71],[93,75,88,95,72],
+  ];
+  const tLine=cd.map(([x,,c])=>`${(x/100)*W},${py(c)}`).join(" ");
+  const Chart=()=><svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"100%",position:"absolute",inset:0}}>
+    <defs>
+      <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={G} stopOpacity="0.18"/>
+        <stop offset="100%" stopColor={G} stopOpacity="0"/>
+      </linearGradient>
+    </defs>
+    <polygon points={`0,${H} ${tLine} ${W},${H}`} fill="url(#cg)"/>
+    <polyline points={tLine} fill="none" stroke={G} strokeWidth="1.5" strokeLinejoin="round"/>
+    {cd.map(([x,o,c,h,l],i)=>{
+      const cx=(x/100)*W,up=c>=o,col=up?G:"#ef4444";
+      return <g key={i}>
+        <line x1={cx} y1={py(h)} x2={cx} y2={py(l)} stroke={col} strokeWidth="1" opacity="0.5"/>
+        <rect x={cx-5} y={py(Math.max(o,c))} width={10} height={Math.max(py(Math.min(o,c))-py(Math.max(o,c)),2)} fill={col} opacity={up?0.9:0.65} rx="1"/>
+      </g>;
+    })}
+  </svg>;
 
-      {step==="pick"&&<>
-        <div style={{fontSize:"0.65rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",marginBottom:"1rem"}}>Seleccioná tu perfil</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
-          {USERS.map(u=><button key={u.id} onClick={()=>pickUser(u.id)} style={{padding:"1.5rem 1rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:16,color:"#ccc",cursor:"pointer",fontFamily:"inherit",fontSize:"1.1rem",fontWeight:700,transition:"border-color .15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#333"} onMouseLeave={e=>e.currentTarget.style.borderColor="#1a1a1a"}>
-            <div style={{fontSize:"1.8rem",marginBottom:6}}>{u.id==="mati"?"🧑":"👤"}</div>
-            {u.name}
-          </button>)}
+  const FIcon=({ch,s})=><div style={{position:"absolute",width:46,height:46,background:"rgba(13,13,13,0.85)",border:"1px solid #1e1e1e",borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(6px)",...s}}>
+    <span style={{fontSize:"1.15rem",color:G}}>{ch}</span>
+  </div>;
+
+  if(step==="pw"){
+    const u=USERS.find(x=>x.id===userId);
+    return <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit',system-ui,sans-serif"}}>
+      <div style={{width:"100%",maxWidth:320,padding:"0 1.5rem",textAlign:"center"}}>
+        <div style={{width:56,height:56,borderRadius:28,background:u?.id==="mati"?G:"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}>
+          <span style={{fontSize:"1.4rem",fontWeight:800,color:u?.id==="mati"?"#000":"#555"}}>{u?.name[0]}</span>
         </div>
-      </>}
-
-      {step==="pw"&&<>
-        <div style={{fontSize:"0.65rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",marginBottom:"1.25rem"}}>Hola, {USERS.find(x=>x.id===userId)?.name}</div>
-        <input
-          type="password"
-          placeholder="Contraseña"
-          autoFocus
-          style={{...inpS,width:"100%",marginBottom:"0.75rem",textAlign:"center",fontSize:"1rem",letterSpacing:"0.15em"}}
-          value={pw}
-          onChange={e=>{setPw(e.target.value);setErr("");}}
+        <div style={{fontSize:"1.4rem",fontWeight:800,color:"#fff",marginBottom:4}}>{u?.name}</div>
+        <div style={{fontSize:"0.7rem",color:"#444",marginBottom:"1.5rem"}}>Ingresá tu contraseña</div>
+        <input type="password" placeholder="••••••••" autoFocus
+          style={{...inpS,width:"100%",marginBottom:"0.6rem",textAlign:"center",fontSize:"1.2rem",letterSpacing:"0.2em"}}
+          value={pw} onChange={e=>{setPw(e.target.value);setErr("");}}
           onKeyDown={e=>e.key==="Enter"&&submit()}
         />
-        {err&&<div style={{fontSize:"0.72rem",color:"#ef4444",textAlign:"center",marginBottom:"0.75rem"}}>{err}</div>}
-        <Btn onClick={submit} color="#22c55e" style={{width:"100%",color:"#000",justifyContent:"center"}}>Ingresar</Btn>
-        <button onClick={()=>{setStep("pick");setErr("");}} style={{display:"block",margin:"0.75rem auto 0",background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"0.72rem",fontFamily:"inherit"}}>← Volver</button>
-      </>}
+        {err&&<div style={{fontSize:"0.72rem",color:"#ef4444",marginBottom:"0.6rem"}}>{err}</div>}
+        <button onClick={submit} style={{width:"100%",padding:"0.85rem",background:G,border:"none",borderRadius:12,fontSize:"0.95rem",fontWeight:700,color:"#000",cursor:"pointer",fontFamily:"inherit"}}>Entrar →</button>
+        <button onClick={()=>{setStep("pick");setErr("");}} style={{display:"block",margin:"0.85rem auto 0",background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"0.72rem",fontFamily:"inherit"}}>← Volver</button>
+      </div>
+    </div>;
+  }
+
+  return <div style={{minHeight:"100vh",background:"#000",fontFamily:"'Outfit',system-ui,sans-serif",color:"#fff",maxWidth:520,margin:"0 auto",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    {/* Header */}
+    <div style={{padding:"1.25rem 1.25rem 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:38,height:38,background:G,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic n="trend" s={20}/>
+        </div>
+        <span style={{fontSize:"1.05rem",fontWeight:800,color:"#fff"}}>CFO</span>
+      </div>
+      <div style={{background:"#0d0d0d",border:"1px solid #1e1e1e",borderRadius:20,padding:"0.3rem 0.9rem",fontSize:"0.7rem",color:"#444",letterSpacing:"0.05em"}}>$ · € · % · ₿</div>
+    </div>
+
+    {/* Hero */}
+    <div style={{flex:1,position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"1.5rem 1.5rem 1rem",minHeight:280}}>
+      <div style={{position:"absolute",inset:0,opacity:0.55}}><Chart/></div>
+      <FIcon ch="$" s={{top:"14%",left:"6%"}}/>
+      <FIcon ch="◎" s={{top:"10%",right:"7%"}}/>
+      <FIcon ch="💳" s={{bottom:"22%",left:"7%"}}/>
+      <FIcon ch="%" s={{bottom:"18%",right:"7%"}}/>
+      <div style={{position:"relative",textAlign:"center",zIndex:1}}>
+        <div style={{fontSize:"clamp(4.5rem,20vw,6rem)",fontWeight:900,color:"#fff",lineHeight:1,letterSpacing:"-0.03em",textShadow:"0 4px 40px rgba(0,0,0,0.9)"}}>CFO</div>
+        <div style={{fontSize:"0.95rem",color:`${G}cc`,fontWeight:600,marginTop:6,letterSpacing:"0.01em"}}>Controla tus Finanzas Online</div>
+      </div>
+    </div>
+
+    {/* Profile selector */}
+    <div style={{padding:"0 1.25rem 1.5rem",flexShrink:0}}>
+      <div style={{fontSize:"0.6rem",color:"#2a2a2a",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.18em",marginBottom:"0.75rem"}}>Seleccioná tu perfil</div>
+      <div style={{display:"flex",flexDirection:"column",gap:"0.55rem"}}>
+        {USERS.map(u=>{
+          const isMati=u.id==="mati";
+          return <button key={u.id} onClick={()=>pickUser(u.id)}
+            style={{display:"flex",alignItems:"center",gap:"0.85rem",padding:"0.85rem 1rem",background:"#0d0d0d",border:`1px solid ${isMati?G+"28":"#181818"}`,borderRadius:14,cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=isMati?G+"55":"#2a2a2a"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=isMati?G+"28":"#181818"}>
+            <div style={{width:42,height:42,borderRadius:21,background:isMati?G:"#181818",border:isMati?"none":"1px solid #252525",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <span style={{fontSize:"1.1rem",fontWeight:800,color:isMati?"#000":"#444"}}>{u.name[0]}</span>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:"0.95rem",fontWeight:700,color:"#e5e5e5"}}>{u.name}</div>
+              <div style={{fontSize:"0.65rem",color:"#383838",marginTop:1}}>Entrar a mi tablero</div>
+            </div>
+            <span style={{color:G,fontSize:"1rem",fontWeight:700}}>↗</span>
+          </button>;
+        })}
+      </div>
+    </div>
+
+    {/* Footer */}
+    <div style={{textAlign:"center",padding:"0 0 1.75rem",fontSize:"0.58rem",color:"#1e1e1e",letterSpacing:"0.18em",fontWeight:700,flexShrink:0}}>
+      GASTOS · CUOTAS · INVERSIONES
     </div>
   </div>;
 }
