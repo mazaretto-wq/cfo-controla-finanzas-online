@@ -412,6 +412,46 @@ function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMo
   const addExp=async()=>{if(!eF.description||!eF.amount)return;const u=[...expenses,{...eF,id:Date.now(),amount:+eF.amount}];setExpenses(u);await save("expenses",u);setModal(null);setEF({date:now.toISOString().slice(0,10),description:"",category:"Comida",amount:"",card:"Visa Santander"});};
   const delExp=async id=>{const u=expenses.filter(x=>x.id!==id);setExpenses(u);await save("expenses",u);};
 
+  // ── Importar resumen ──
+  const [importing,setImporting]=useState(false);
+  const [importErr,setImportErr]=useState("");
+  const [importItems,setImportItems]=useState(null); // array de transacciones a revisar
+  const fileRef=React.useRef();
+
+  const handleFile=async e=>{
+    const file=e.target.files?.[0];
+    if(!file){return;}
+    e.target.value="";
+    setImportErr("");setImporting(true);setImportItems(null);
+    try{
+      const reader=new FileReader();
+      const b64=await new Promise((res,rej)=>{reader.onload=()=>res(reader.result.split(",")[1]);reader.onerror=rej;reader.readAsDataURL(file);});
+      const resp=await fetch("/api/parse-statement",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data:b64,mediaType:file.type})});
+      if(!resp.ok){const err=await resp.json();throw new Error(err.error||"Error del servidor");}
+      const {transactions}=await resp.json();
+      if(!transactions?.length)throw new Error("No se encontraron transacciones");
+      // Agregar estado de selección y tarjeta por defecto
+      setImportItems(transactions.map((t,i)=>({...t,_id:i,_selected:true,card:"Visa Santander"})));
+    }catch(err){setImportErr(err.message);}
+    setImporting(false);
+  };
+
+  const confirmImport=async()=>{
+    const selected=importItems.filter(t=>t._selected);
+    if(!selected.length){setImportItems(null);return;}
+    const toAdd=selected.map(t=>({
+      id:Date.now()+Math.random(),
+      date:t.date,
+      description:t.description,
+      category:t.category,
+      amount:+t.amount,
+      card:t.card,
+    }));
+    const u=[...expenses,...toAdd];
+    setExpenses(u);await save("expenses",u);
+    setImportItems(null);
+  };
+
   return <div style={{padding:"0 1rem 90px",animation:"fadeIn .25s ease"}}>
     <div style={{padding:"1.25rem 0 0.75rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div><div style={{fontSize:"0.6rem",color:"#ef4444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em"}}>Módulo</div><div style={{fontSize:"1.3rem",fontWeight:800,color:"#fff"}}>Gastos</div></div>
@@ -444,8 +484,14 @@ function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMo
         <div style={{height:3,background:"#1a1a1a",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${(c.val/maxCat)*100}%`,background:CAT_COLORS[c.name],borderRadius:2,transition:"width .5s"}}/></div>
       </div>)}
     </div>}
+    {importErr&&<div style={{background:"#ef444418",border:"1px solid #ef444433",borderRadius:10,padding:"0.6rem 0.9rem",marginBottom:"0.75rem",fontSize:"0.75rem",color:"#ef4444"}}>{importErr}</div>}
     <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem"}}>
       <Btn onClick={()=>setModal("add")} color="#ef4444" style={{flex:1,color:"#fff"}}><Ic n="plus" s={14}/>Agregar gasto</Btn>
+      <Btn onClick={()=>fileRef.current?.click()} disabled={importing} color="#6366f1" style={{color:"#fff",gap:6}}>
+        {importing?<span style={{display:"inline-flex",animation:"spin 1s linear infinite"}}><Ic n="refresh" s={14}/></span>:<Ic n="upload" s={14}/>}
+        {importing?"Leyendo...":"Importar"}
+      </Btn>
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={handleFile}/>
     </div>
     {displayExp.length===0?<div style={{textAlign:"center",color:"#222",padding:"3rem",fontSize:"0.85rem"}}>Sin gastos{cardFilter!=="Todos"?` de ${cardFilter}`:""} en {MONTHS[filterMonth]}</div>
     :displayExp.slice().reverse().map((e,i)=><div key={e.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.7rem 0.85rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,marginBottom:"0.4rem",animation:`fadeIn .25s ${i*.03}s both`}}>
@@ -460,6 +506,37 @@ function ExpensesScreen({expenses,setExpenses,filterMonth,filterYear,setFilterMo
       <div style={{fontSize:"0.85rem",fontWeight:700,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap"}}>{fmtARS(e.amount)}</div>
       <button onClick={()=>delExp(e.id)} style={{background:"none",border:"none",color:"#252525",cursor:"pointer",padding:4,display:"flex",borderRadius:6}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#252525"}><Ic n="trash" s={13}/></button>
     </div>)}
+    {importItems&&<Modal title={`Revisá las transacciones (${importItems.filter(t=>t._selected).length}/${importItems.length})`} onClose={()=>setImportItems(null)}>
+      <div style={{maxHeight:"55vh",overflowY:"auto",marginBottom:"0.75rem",display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+        {importItems.map((t,i)=><div key={t._id} style={{background:t._selected?"#0d0d0d":"#080808",border:`1px solid ${t._selected?"#1a1a1a":"#111"}`,borderRadius:10,padding:"0.65rem 0.8rem",opacity:t._selected?1:0.45}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:"0.6rem"}}>
+            <input type="checkbox" checked={t._selected} onChange={()=>setImportItems(items=>items.map((x,j)=>j===i?{...x,_selected:!x._selected}:x))} style={{marginTop:3,accentColor:"#6366f1",width:14,height:14,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:4}}>
+                <div style={{fontSize:"0.8rem",fontWeight:600,color:"#ddd",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.description}</div>
+                <div style={{fontSize:"0.82rem",fontWeight:700,color:"#ef4444",fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",flexShrink:0}}>{fmtARS(t.amount)}</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem"}}>
+                <select style={{...inpS,fontSize:"0.68rem",padding:"0.25rem 0.4rem"}} value={t.category} onChange={e=>setImportItems(items=>items.map((x,j)=>j===i?{...x,category:e.target.value}:x))}>
+                  {CATS.map(c=><option key={c}>{c}</option>)}
+                </select>
+                <select style={{...inpS,fontSize:"0.68rem",padding:"0.25rem 0.4rem"}} value={t.card} onChange={e=>setImportItems(items=>items.map((x,j)=>j===i?{...x,card:e.target.value}:x))}>
+                  {CARDS.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{fontSize:"0.62rem",color:"#444",marginTop:3,display:"flex",gap:6}}>
+                <span>{t.date}</span>
+                {t.type==="cuota"&&<span style={{color:"#f59e0b",fontWeight:700}}>Cuota {t.installment_current}/{t.installment_total}</span>}
+              </div>
+            </div>
+          </div>
+        </div>)}
+      </div>
+      <div style={{display:"flex",gap:"0.5rem",justifyContent:"flex-end"}}>
+        <Btn ghost onClick={()=>setImportItems(null)}>Cancelar</Btn>
+        <Btn onClick={confirmImport} color="#6366f1" style={{color:"#fff"}}><Ic n="check" s={13}/>Importar {importItems.filter(t=>t._selected).length} gastos</Btn>
+      </div>
+    </Modal>}
     {modal==="add"&&<Modal title="Nuevo gasto" onClose={()=>setModal(null)}>
       <Field label="Fecha"><input type="date" style={inpS} value={eF.date} onChange={e=>setEF(f=>({...f,date:e.target.value}))}/></Field>
       <Field label="Descripción"><input style={inpS} placeholder="Ej: Supermercado" value={eF.description} onChange={e=>setEF(f=>({...f,description:e.target.value}))}/></Field>
