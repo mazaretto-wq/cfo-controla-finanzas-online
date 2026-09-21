@@ -27,18 +27,25 @@
 <script type="text/babel">
 const { useState, useEffect } = React;
 
+// ─── Users ───────────────────────────────────────────────────────────────────
+const USERS = [
+  {id:"mati", name:"Mati", password:"Mati 2302"},
+  {id:"ale",  name:"Ale",  password:"Ale 06011"},
+];
+let U = ""; // storage prefix, set at login: "mati_" | "ale_"
+
 // ─── Storage via localStorage ────────────────────────────────────────────────
 async function load(key) {
-  try { const v = localStorage.getItem("cfo_" + key); return v ? JSON.parse(v) : []; } catch { return []; }
+  try { const v = localStorage.getItem("cfo_" + U + key); return v ? JSON.parse(v) : []; } catch { return []; }
 }
 async function loadOne(key) {
-  try { const v = localStorage.getItem("cfo_one_" + key); return v ? JSON.parse(v) : null; } catch { return null; }
+  try { const v = localStorage.getItem("cfo_one_" + U + key); return v ? JSON.parse(v) : null; } catch { return null; }
 }
 async function save(key, data) {
-  try { localStorage.setItem("cfo_" + key, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem("cfo_" + U + key, JSON.stringify(data)); } catch {}
 }
 async function saveOne(key, data) {
-  try { localStorage.setItem("cfo_one_" + key, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem("cfo_one_" + U + key, JSON.stringify(data)); } catch {}
 }
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
@@ -116,9 +123,9 @@ const SEED_INSTALLMENTS = [
   {description:"Panmar (MP) B",        amount:16666.66,  cur:1, tot:3,  rem:3, cat:"Hogar",           startM:5, card:"Mercado Pago"},
   {description:"MercaColubre (MP)",    amount:53660.15,  cur:1, tot:6,  rem:6, cat:"Hogar",           startM:5, card:"Mercado Pago"},
 ];
-function buildSeedBills() {
+function buildSeedBills(items=SEED_INSTALLMENTS) {
   const bills=[];
-  SEED_INSTALLMENTS.forEach(item=>{
+  items.forEach(item=>{
     const base={m:item.startM??4, y:2026};
     for(let i=0;i<item.rem;i++){
       let m=base.m+i, y=base.y+Math.floor(m/12); m=m%12;
@@ -192,6 +199,7 @@ const SVGS={
   trend:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg>,
   refresh:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>,
   spark:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/></svg>,
+  user:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
 };
 const Ic=({n,s=16})=><span style={{display:"inline-flex",width:s,height:s,flexShrink:0}}>{SVGS[n]}</span>;
 
@@ -636,23 +644,108 @@ function InvestmentsScreen({investments,setInvestments}){
   </div>;
 }
 
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+function Login({onLogin}){
+  const [step,setStep]=useState("pick"); // "pick" | "pw"
+  const [userId,setUserId]=useState(null);
+  const [pw,setPw]=useState("");
+  const [err,setErr]=useState("");
+
+  const pickUser=id=>{setUserId(id);setPw("");setErr("");setStep("pw");};
+  const submit=()=>{
+    const u=USERS.find(x=>x.id===userId);
+    if(u&&pw===u.password){onLogin(userId);}
+    else{setErr("Contraseña incorrecta");setPw("");}
+  };
+
+  return <div style={{minHeight:"100vh",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit',system-ui,sans-serif"}}>
+    <div style={{width:"100%",maxWidth:340,padding:"0 1.5rem"}}>
+      <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
+        <div style={{fontSize:"0.6rem",color:"#333",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.18em",marginBottom:6}}>CFO</div>
+        <div style={{fontSize:"2rem",fontWeight:800,color:"#fff",lineHeight:1.1}}>Controla Finanzas</div>
+      </div>
+
+      {step==="pick"&&<>
+        <div style={{fontSize:"0.65rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",marginBottom:"1rem"}}>Seleccioná tu perfil</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
+          {USERS.map(u=><button key={u.id} onClick={()=>pickUser(u.id)} style={{padding:"1.5rem 1rem",background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:16,color:"#ccc",cursor:"pointer",fontFamily:"inherit",fontSize:"1.1rem",fontWeight:700,transition:"border-color .15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor="#333"} onMouseLeave={e=>e.currentTarget.style.borderColor="#1a1a1a"}>
+            <div style={{fontSize:"1.8rem",marginBottom:6}}>{u.id==="mati"?"🧑":"👤"}</div>
+            {u.name}
+          </button>)}
+        </div>
+      </>}
+
+      {step==="pw"&&<>
+        <div style={{fontSize:"0.65rem",color:"#444",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",marginBottom:"1.25rem"}}>Hola, {USERS.find(x=>x.id===userId)?.name}</div>
+        <input
+          type="password"
+          placeholder="Contraseña"
+          autoFocus
+          style={{...inpS,width:"100%",marginBottom:"0.75rem",textAlign:"center",fontSize:"1rem",letterSpacing:"0.15em"}}
+          value={pw}
+          onChange={e=>{setPw(e.target.value);setErr("");}}
+          onKeyDown={e=>e.key==="Enter"&&submit()}
+        />
+        {err&&<div style={{fontSize:"0.72rem",color:"#ef4444",textAlign:"center",marginBottom:"0.75rem"}}>{err}</div>}
+        <Btn onClick={submit} color="#22c55e" style={{width:"100%",color:"#000",justifyContent:"center"}}>Ingresar</Btn>
+        <button onClick={()=>{setStep("pick");setErr("");}} style={{display:"block",margin:"0.75rem auto 0",background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"0.72rem",fontFamily:"inherit"}}>← Volver</button>
+      </>}
+    </div>
+  </div>;
+}
+
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function App(){
+  const [currentUser,setCurrentUser]=useState(()=>localStorage.getItem("cfo_session")||null);
   const [screen,setScreen]=useState("home");
   const [expenses,setExpenses]=useState([]);
   const [bills,setBills]=useState([]);
   const [investments,setInvestments]=useState([]);
-  const [loading,setLoading]=useState(true);
+  const [loading,setLoading]=useState(false);
   const [filterMonth,setFilterMonth]=useState(now.getMonth());
   const [filterYear,setFilterYear]=useState(now.getFullYear());
 
+  const handleLogin=userId=>{
+    // Migrar datos sin prefijo → prefijo mati_ en primer login de Mati
+    if(userId==="mati"){
+      const alreadyMigrated=localStorage.getItem("cfo_one_mati_expSeeded");
+      const hasOldData=localStorage.getItem("cfo_one_expSeeded");
+      if(hasOldData&&!alreadyMigrated){
+        ["expenses","bills","investments"].forEach(k=>{
+          const v=localStorage.getItem("cfo_"+k);
+          if(v) localStorage.setItem("cfo_mati_"+k,v);
+        });
+        ["seeded","billsSeeded","expSeeded","dataVersion"].forEach(k=>{
+          const v=localStorage.getItem("cfo_one_"+k);
+          if(v) localStorage.setItem("cfo_one_mati_"+k,v);
+        });
+      }
+    }
+    U=userId+"_";
+    localStorage.setItem("cfo_session",userId);
+    setCurrentUser(userId);
+    setLoading(true);
+  };
+
+  const handleLogout=()=>{
+    U="";
+    localStorage.removeItem("cfo_session");
+    setCurrentUser(null);
+    setExpenses([]);setBills([]);setInvestments([]);
+    setScreen("home");
+  };
+
   const DATA_VERSION=6;
   const init=async()=>{
+    const seedExp  = U==="ale_" ? [] : SEED_EXPENSES;
+    const seedInst = U==="ale_" ? [] : SEED_INSTALLMENTS;
+    const seedInv  = U==="ale_" ? [] : SEED_INV;
+
     const [e,b,inv,seeded,billsSeeded,expSeeded,dataVer]=await Promise.all([load("expenses"),load("bills"),load("investments"),loadOne("seeded"),loadOne("billsSeeded"),loadOne("expSeeded"),loadOne("dataVersion")]);
     const ver=dataVer||0;
 
     // Gastos
-    if(!expSeeded&&(!e||e.length===0)){setExpenses(SEED_EXPENSES);await save("expenses",SEED_EXPENSES);await saveOne("expSeeded",true);}
+    if(!expSeeded&&(!e||e.length===0)){setExpenses(seedExp);await save("expenses",seedExp);await saveOne("expSeeded",true);}
     else {
       let existing=e||[];
       if(ver<2){
@@ -682,13 +775,13 @@ function App(){
     }
 
     // Cuotas
-    if(!billsSeeded&&(!b||b.length===0)){const sb=buildSeedBills();setBills(sb);await save("bills",sb);await saveOne("billsSeeded",true);}
+    if(!billsSeeded&&(!b||b.length===0)){const sb=buildSeedBills(seedInst);setBills(sb);await save("bills",sb);await saveOne("billsSeeded",true);}
     else if(ver<2){
       // Migración v2: agregar cuotas de Mercado Pago si no existen
       const existing=b||[];
       const hasMp=existing.some(x=>x.card==="Mercado Pago");
       if(!hasMp){
-        const allBills=buildSeedBills();
+        const allBills=buildSeedBills(seedInst);
         const mpBills=allBills.filter(x=>x.card==="Mercado Pago");
         const merged=[...existing,...mpBills];
         setBills(merged);await save("bills",merged);
@@ -704,7 +797,7 @@ function App(){
     }
 
     // Inversiones
-    if(!seeded&&(!inv||inv.length===0)){setInvestments(SEED_INV);await save("investments",SEED_INV);await saveOne("seeded",true);}else{
+    if(!seeded&&(!inv||inv.length===0)){setInvestments(seedInv);await save("investments",seedInv);await saveOne("seeded",true);}else{
       let existingInv=inv||[];
       if(ver<6){
         // v6: actualizar qty y price de AAPL, NVDA, SPY, LRCX
@@ -719,7 +812,14 @@ function App(){
     setLoading(false);
   };
 
-  useEffect(()=>{ init(); },[]);
+  useEffect(()=>{
+    if(!currentUser) return;
+    // Restaurar U si venimos de un session guardado
+    if(U==="") U=currentUser+"_";
+    init();
+  },[currentUser]);
+
+  if(!currentUser) return <Login onLogin={handleLogin}/>;
 
   if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#000",fontFamily:"'JetBrains Mono',monospace"}}>
     <div style={{textAlign:"center"}}>
@@ -729,6 +829,7 @@ function App(){
   </div>;
 
   const navColors={home:"#fff",expenses:"#ef4444",bills:"#f59e0b",investments:"#22c55e"};
+  const userName=USERS.find(x=>x.id===currentUser)?.name;
   return <div style={{minHeight:"100vh",background:"#000",fontFamily:"'Outfit',system-ui,sans-serif",color:"#eee",maxWidth:520,margin:"0 auto"}}>
     <div style={{paddingBottom:70}}>
       {screen==="home"&&<Home expenses={expenses} bills={bills} investments={investments} onNav={setScreen} filterMonth={filterMonth} filterYear={filterYear} setFilterMonth={setFilterMonth} setFilterYear={setFilterYear}/>}
@@ -736,7 +837,7 @@ function App(){
       {screen==="bills"&&<BillsScreen bills={bills} setBills={setBills}/>}
       {screen==="investments"&&<InvestmentsScreen investments={investments} setInvestments={setInvestments}/>}
     </div>
-    <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:520,background:"rgba(0,0,0,.97)",borderTop:"1px solid #111",display:"grid",gridTemplateColumns:"repeat(4,1fr)",padding:"0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom))",zIndex:50}}>
+    <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:520,background:"rgba(0,0,0,.97)",borderTop:"1px solid #111",display:"grid",gridTemplateColumns:"repeat(4,1fr) auto",padding:"0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom))",zIndex:50}}>
       {[["home","home","Inicio"],["expenses","wallet","Gastos"],["bills","calendar","Cuotas"],["investments","trend","Inversiones"]].map(([id,icon,label])=>{
         const active=screen===id,color=navColors[id];
         return <button key={id} onClick={()=>setScreen(id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"0.3rem 0.5rem",border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit"}}>
@@ -744,6 +845,10 @@ function App(){
           <span style={{fontSize:"0.58rem",fontWeight:active?700:500,color:active?color:"#2a2a2a"}}>{label}</span>
         </button>;
       })}
+      <button onClick={handleLogout} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"0.3rem 0.6rem",border:"none",background:"transparent",cursor:"pointer",fontFamily:"inherit"}}>
+        <div style={{width:36,height:32,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",color:"#2a2a2a"}}><Ic n="user" s={17}/></div>
+        <span style={{fontSize:"0.58rem",fontWeight:500,color:"#2a2a2a"}}>{userName}</span>
+      </button>
     </div>
   </div>;
 }
